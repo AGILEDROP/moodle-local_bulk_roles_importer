@@ -25,11 +25,57 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-if ($hassiteconfig) {
-    $settings = new admin_settingpage('local_bulk_roles_importer_settings', new lang_string('pluginname', 'local_bulk_roles_importer'));
+require_once('lib.php');
 
-    // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedIf
+if ($hassiteconfig) {
+    $settings = new admin_settingpage(
+        'local_bulk_roles_importer_settings',
+        new lang_string('settings:pagetitle', 'local_bulk_roles_importer')
+    );
+    $ADMIN->add('localplugins', $settings);
+
     if ($ADMIN->fulltree) {
-        // TODO: Define actual plugin settings page and add it to the tree - {@link https://docs.moodle.org/dev/Admin_settings}.
+        $rolesretrievaloptions = [
+            'github' => new lang_string('label:githuboption', 'local_bulk_roles_importer'),
+            'gitlab' => new lang_string('label:gitlaboption', 'local_bulk_roles_importer'),
+            'bitbucket' => new lang_string('label:bitbucketoption', 'local_bulk_roles_importer'),
+            'file' => new lang_string('label:fileoption', 'local_bulk_roles_importer'),
+        ];
+        $setting = new admin_setting_configselect('local_bulk_roles_importer/roleretrievalsource',
+            new lang_string('label:rolesretrievalsource', 'local_bulk_roles_importer'),
+            new lang_string('label:rolesretrievalsourcedescription', 'local_bulk_roles_importer'),
+            "github",
+            $rolesretrievaloptions);
+        $settings->add($setting);
+
+        $setting = new admin_setting_configcheckbox(
+            'local_bulk_roles_importer/taskruntimeenabled',
+            new lang_string('label:taskruntimeenabled', 'local_bulk_roles_importer'),
+            new lang_string('label:taskruntimeenableddescription', 'local_bulk_roles_importer'),
+            '0',
+        );
+        $settings->add($setting);
+        $settings->hide_if('local_bulk_roles_importer/taskruntimeenabled',
+            'local_bulk_roles_importer/roleretrievalsource',
+            'eq',
+            'file');
+
+        $setting = new admin_setting_configtime(
+            'local_bulk_roles_importer/taskruntimehour',
+            'local_bulk_roles_importer/taskruntimeminute',
+            new lang_string('label:taskruntime', 'local_bulk_roles_importer'),
+            new lang_string('label:taskruntimedescription', 'local_bulk_roles_importer'),
+            ['h' => 4, 'm' => 0],
+        );
+        $settings->add($setting);
+        $settings->hide_if('local_bulk_roles_importer/taskruntimehour',
+            'local_bulk_roles_importer/roleretrievalsource',
+            'eq',
+            'file');
+
+        require_once(__DIR__ . "/settings/settings_github.php");
+        require_once(__DIR__ . "/settings/settings_gitlab.php");
+        require_once(__DIR__ . "/settings/settings_bitbucket.php");
+        require_once(__DIR__ . "/settings/settings_file.php");
     }
 }
