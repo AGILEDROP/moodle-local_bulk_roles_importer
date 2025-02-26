@@ -14,29 +14,40 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_bulk_roles_importer\task;
+
 /**
- * Defiled CRON jobs for local_bulk_roles_importer plugin.
+ * Task to import roles from GitLab repository.
  *
- * File         tasks.php
+ * File         gitlab_roles_import.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
  *
- * @copyright   Agiledrop, 2024
+ * @copyright   Agiledrop, 2025
  * @author      Agiledrop 2024 <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+use core\task\scheduled_task;
+use local_bulk_roles_importer\roles_importer;
 
-$tasks = [
-    [
-        'classname' => '\local_bulk_roles_importer\task\import_roles',
-        'blocking' => 0,
-        'minute' => '0',
-        'hour' => '4',
-        'day' => '*',
-        'month' => '*',
-        'dayofweek' => '*',
-    ],
-];
+/**
+ * Define scheduled task for check Moodle users for system roles.
+ */
+class import_roles extends scheduled_task {
+    /**
+     * Get task name.
+     */
+    public function get_name() {
+        return get_string('label:taskimportroles', 'local_bulk_roles_importer');
+    }
+
+    /**
+     * Execute scheduled task.
+     */
+    public function execute() {
+        $roles_importer = new roles_importer();
+        $roles_importer->import_roles();
+    }
+}

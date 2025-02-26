@@ -14,29 +14,51 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_bulk_roles_importer\util;
+
 /**
- * Defiled CRON jobs for local_bulk_roles_importer plugin.
+ * Task to import roles from GitLab repository.
  *
- * File         tasks.php
+ * File         gitlab_roles_import.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
  *
- * @copyright   Agiledrop, 2024
+ * @copyright   Agiledrop, 2025
  * @author      Agiledrop 2024 <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+use coding_exception;
+use core_role_preset;
+use dml_exception;
 
-$tasks = [
-    [
-        'classname' => '\local_bulk_roles_importer\task\import_roles',
-        'blocking' => 0,
-        'minute' => '0',
-        'hour' => '4',
-        'day' => '*',
-        'month' => '*',
-        'dayofweek' => '*',
-    ],
-];
+/**
+ * Roles importing strategy for GitLab.
+ */
+class gitlab_roles_importer_strategy implements roles_importer_strategy_interface {
+
+    /** @var gitlab_api $gitlab Gitlab Api instance. */
+    private gitlab_api $gitlab;
+
+    /**
+     * Constructor.
+     */
+    public function __construct() {
+        $this->gitlab = new gitlab_api();
+    }
+
+    public function get_name(): string
+    {
+        return 'gitlab';
+    }
+
+    public function get_last_updated(): string {
+        return $this->gitlab->get_master_branch_last_updated();
+    }
+
+    public function get_roles(): array {
+        return $this->gitlab->get_roles();
+    }
+
+}

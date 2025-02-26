@@ -14,29 +14,45 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_bulk_roles_importer\util;
+
 /**
- * Defiled CRON jobs for local_bulk_roles_importer plugin.
+ * Task to import roles from GitLab repository.
  *
- * File         tasks.php
+ * File         gitlab_roles_import.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
  *
- * @copyright   Agiledrop, 2024
+ * @copyright   Agiledrop, 2025
  * @author      Agiledrop 2024 <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+/**
+ * Roles importing strategy interface.
+ */
+interface roles_importer_strategy_interface {
 
-$tasks = [
-    [
-        'classname' => '\local_bulk_roles_importer\task\import_roles',
-        'blocking' => 0,
-        'minute' => '0',
-        'hour' => '4',
-        'day' => '*',
-        'month' => '*',
-        'dayofweek' => '*',
-    ],
-];
+    /**
+     * Returns the name of the strategy.
+     *
+     * @return string
+     */
+    public function get_name(): string;
+
+    /**
+     * Returns timestamp of last update at the source.
+     *
+     * @return string
+     */
+    public function get_last_updated(): string;
+
+    /**
+     * Returns an array of roles.
+     *
+     * @return array
+     */
+    public function get_roles(): array;
+
+}

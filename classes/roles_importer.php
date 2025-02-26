@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\task;
+namespace local_bulk_roles_importer;
 
 /**
  * Task to import roles from GitLab repository.
@@ -30,64 +30,75 @@ namespace local_bulk_roles_importer\task;
  */
 
 use coding_exception;
-use core\task\scheduled_task;
 use core_role_preset;
 use dml_exception;
-use local_bulk_roles_importer\util\gitlab_api;
 use local_bulk_roles_importer\util\role_manager;
+use local_bulk_roles_importer\util\roles_importer_strategy_interface;
 
 /**
- * Define scheduled task for check Moodle users for system roles.
+ * Roles importing strategy context.
  */
-class gitlab_roles_import extends scheduled_task {
+class roles_importer {
 
     /** @var role_manager $rolemanager Role manager instance. */
     private role_manager $rolemanager;
 
-    /** @var gitlab_api $gitlab Gitlab Api instance. */
-    private gitlab_api $gitlab;
-
     /** @var int $lastimport Last import timestamp. */
-    private $lastimport;
+    private int $lastimport;
 
     /** @var int $lastchanges Last changes timestamp. */
-    private $lastchanges;
+    private int $lastchanges;
+
+    /** @var roles_importer_strategy_interface $rolesimportstrategy Last changes timestamp. */
+    private roles_importer_strategy_interface $rolesimportstrategy;
+
+    /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strateties. */
+    private array $rolesimportstrategies = [
+        'github' => '',
+        'gitlab' => '\\local_bulk_roles_importer\\util\\gitlab_roles_importer_strategy',
+        'bitbucket' => '',
+        'file' => '',
+    ];
 
     /**
-     * Get task name.
+     * Constructor.
      */
-    public function get_name() {
-        return get_string('label:taskgitlabroles', 'local_bulk_roles_importer');
+    public function __construct() {
+        $this->rolemanager = new role_manager();
     }
 
     /**
      * Execute scheduled task.
      */
-    public function execute() {
-
-        $this->rolemanager = new role_manager();
-        $this->gitlab = new gitlab_api();
+    public function import_roles() {
+        $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
 
         mtrace('=======================================================================================================');
-        mtrace('IMPORT ROLES FROM GITLAB');
+        mtrace('  IMPORT ROLES FROM SOURCE: ' . $strategy);
         mtrace('=======================================================================================================');
 
-        $rolemanager = new role_manager();
-        $gitlab = new gitlab_api();
+        $this->lastimport = $this->rolemanager->get_lastimport();
 
-        $this->lastimport = $rolemanager->get_lastimport();
-        $this->lastchanges = $gitlab->get_master_branch_last_updated();
+        if (!class_exists($this->rolesimportstrategies[$strategy])) {
+            mtrace('ERROR - source: ' . $strategy . ' does not exist');
+            return;
+        }
+        $this->rolesimportstrategy = new $this->rolesimportstrategies[$strategy]();
+        $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
         if (!$this->lastchanges) {
             mtrace('ERROR - cannot obtain master branch last updated time');
-        } else {
-            $roles = $gitlab->get_roles();
-            if (empty($roles)) {
-                mtrace('ERROR - cannot obtain roles');
-            } else {
-                $this->process_import($roles);
-            }
+            return;
         }
+
+        $roles = $this->rolesimportstrategy->get_roles();
+
+        if (empty($roles)) {
+            mtrace('ERROR - cannot obtain roles');
+            return;
+        }
+
+        $this->process_import($roles);
     }
 
     /**
@@ -105,7 +116,7 @@ class gitlab_roles_import extends scheduled_task {
         foreach ($roles as $role) {
             if (!core_role_preset::is_valid_preset($role->xml)) {
                 $role->needupdate = false;
-                mtrace('unvalid XML');
+                mtrace('invalid XML');
                 mtrace($separator);
                 unset($role);
                 continue;
