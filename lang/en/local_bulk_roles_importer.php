@@ -76,3 +76,5 @@ $string['header:file'] = 'File';
 $string['header:fileinfo'] = 'Select file from which to import roles.';
 $string['label:filesource'] = 'Select file';
 $string['label:filesource_help'] = 'Select the file with role files to import.';
+
+$string['label:taskgitlabroles'] = 'Bulk Roles Importer - Import roles from GitLab.';
