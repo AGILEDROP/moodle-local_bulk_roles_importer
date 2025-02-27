@@ -27,8 +27,6 @@ use local_bulk_roles_importer\util\roles_importer_strategies_manager;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once('lib.php');
-
 if ($hassiteconfig) {
     $settings = new admin_settingpage(
         'local_bulk_roles_importer_settings',
@@ -45,6 +43,13 @@ if ($hassiteconfig) {
             $rolesretrievaloptions);
         $settings->add($setting);
 
+        $task = core\task\manager::get_scheduled_task('\local_bulk_roles_importer\task\import_roles');
+
+        set_config(
+            'taskruntimeenabled',
+            !$task->get_disabled(),
+            'local_bulk_roles_importer'
+        );
         $setting = new admin_setting_configcheckbox(
             'local_bulk_roles_importer/taskruntimeenabled',
             new lang_string('label:taskruntimeenabled', 'local_bulk_roles_importer'),
@@ -52,11 +57,17 @@ if ($hassiteconfig) {
             '0',
         );
         $settings->add($setting);
-        $settings->hide_if('local_bulk_roles_importer/taskruntimeenabled',
-            'local_bulk_roles_importer/roleretrievalsource',
-            'eq',
-            'file');
 
+        set_config(
+            'taskruntimehour',
+            $task->get_hour(),
+            'local_bulk_roles_importer',
+        );
+        set_config(
+            'taskruntimeminute',
+            $task->get_minute(),
+            'local_bulk_roles_importer',
+        );
         $setting = new admin_setting_configtime(
             'local_bulk_roles_importer/taskruntimehour',
             'local_bulk_roles_importer/taskruntimeminute',
@@ -65,10 +76,6 @@ if ($hassiteconfig) {
             ['h' => 4, 'm' => 0],
         );
         $settings->add($setting);
-        $settings->hide_if('local_bulk_roles_importer/taskruntimehour',
-            'local_bulk_roles_importer/roleretrievalsource',
-            'eq',
-            'file');
 
         require_once(__DIR__ . "/settings/settings_github.php");
         require_once(__DIR__ . "/settings/settings_gitlab.php");
