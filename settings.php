@@ -23,6 +23,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_bulk_roles_importer\util\roles_importer_strategies_manager;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once('lib.php');
@@ -35,12 +37,7 @@ if ($hassiteconfig) {
     $ADMIN->add('localplugins', $settings);
 
     if ($ADMIN->fulltree) {
-        $rolesretrievaloptions = [
-            'github' => new lang_string('label:githuboption', 'local_bulk_roles_importer'),
-            'gitlab' => new lang_string('label:gitlaboption', 'local_bulk_roles_importer'),
-            'bitbucket' => new lang_string('label:bitbucketoption', 'local_bulk_roles_importer'),
-            'file' => new lang_string('label:fileoption', 'local_bulk_roles_importer'),
-        ];
+        $rolesretrievaloptions = roles_importer_strategies_manager::get_strategies_names();
         $setting = new admin_setting_configselect('local_bulk_roles_importer/roleretrievalsource',
             new lang_string('label:rolesretrievalsource', 'local_bulk_roles_importer'),
             new lang_string('label:rolesretrievalsourcedescription', 'local_bulk_roles_importer'),

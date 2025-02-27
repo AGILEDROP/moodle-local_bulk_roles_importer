@@ -28,10 +28,6 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'Bulk Roles Importer';
 $string['settings:pagetitle'] = 'Bulk Roles Importer Settings';
 
-$string['label:githuboption'] = 'Github';
-$string['label:gitlaboption'] = 'Gitlab';
-$string['label:bitbucketoption'] = 'Bitbucket';
-$string['label:fileoption'] = 'File';
 $string['label:rolesretrievalsource'] = 'Role import source';
 $string['label:rolesretrievalsourcedescription'] = 'From which source would you like to import roles.';
 $string['label:taskruntimeenabled'] = 'Enable automatic import';

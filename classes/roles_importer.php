@@ -33,6 +33,7 @@ use coding_exception;
 use core_role_preset;
 use dml_exception;
 use local_bulk_roles_importer\util\role_manager;
+use local_bulk_roles_importer\util\roles_importer_strategies_manager;
 use local_bulk_roles_importer\util\roles_importer_strategy_interface;
 
 /**
@@ -53,18 +54,14 @@ class roles_importer {
     private roles_importer_strategy_interface $rolesimportstrategy;
 
     /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strateties. */
-    private array $rolesimportstrategies = [
-        'github' => '',
-        'gitlab' => '\\local_bulk_roles_importer\\util\\gitlab_roles_importer_strategy',
-        'bitbucket' => '',
-        'file' => '',
-    ];
+    private array $rolesimportstrategies;
 
     /**
      * Constructor.
      */
     public function __construct() {
         $this->rolemanager = new role_manager();
+        $this->rolesimportstrategies = roles_importer_strategies_manager::get_strategies_classes();
     }
 
     /**
