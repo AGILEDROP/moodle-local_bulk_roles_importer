@@ -34,12 +34,28 @@ namespace local_bulk_roles_importer\util;
  */
 class roles_importer_strategies_manager {
 
-    /** @var roles_importer_strategy_interface[] $roles_importer_strategies Array of all roles importer strategies. */
+    /** @var array $roles_importer_strategies Array of all roles importer strategies. */
     private static array $roles_importer_strategies = [
-        'github' => '',
-        'gitlab' => gitlab_roles_importer_strategy::class,
-        'bitbucket' => '',
-        'file' => '',
+        'github' => [
+            'name' => 'Github',
+            'class' => gitlab_roles_importer_strategy::class,
+            'automatic' => true,
+        ],
+        'gitlab' => [
+            'name' => 'Gitlab',
+            'class' => gitlab_roles_importer_strategy::class,
+            'automatic' => true,
+        ],
+        'bitbucket' => [
+            'name' => 'Bitbucket',
+            'class' => gitlab_roles_importer_strategy::class,
+            'automatic' => true,
+        ],
+        'file' => [
+            'name' => 'File',
+            'class' => gitlab_roles_importer_strategy::class,
+            'automatic' => false,
+        ],
     ];
 
     /**
@@ -49,7 +65,27 @@ class roles_importer_strategies_manager {
      */
     public static function get_strategies_names(): array
     {
-        return array_combine(array_keys(self::$roles_importer_strategies), array_keys(self::$roles_importer_strategies));
+        $mapfunction = function($value) {
+            return $value['name'];
+        };
+        return array_map($mapfunction, self::$roles_importer_strategies);
+    }
+
+    /**
+     * Get all strategies names.
+     *
+     * @return array
+     */
+    public static function get_automatic_strategies_names(): array
+    {
+        $filterfunction = function($value) {
+            return $value['automatic'];
+        };
+        $mapfunction = function($value) {
+            return $value['name'];
+        };
+        $filteredarray = array_filter(self::$roles_importer_strategies, $filterfunction);
+        return array_map($mapfunction, $filteredarray);
     }
 
     /**
@@ -59,7 +95,10 @@ class roles_importer_strategies_manager {
      */
     public static function get_strategies_classes(): array
     {
-        return self::$roles_importer_strategies;
+        $mapfunction = function($value) {
+            return $value['class'];
+        };
+        return array_map($mapfunction, self::$roles_importer_strategies);
     }
 
 }

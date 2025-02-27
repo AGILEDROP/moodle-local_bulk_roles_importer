@@ -37,7 +37,7 @@ if ($hassiteconfig) {
     $ADMIN->add('localplugins', $settings);
 
     if ($ADMIN->fulltree) {
-        $rolesretrievaloptions = roles_importer_strategies_manager::get_strategies_names();
+        $rolesretrievaloptions = roles_importer_strategies_manager::get_automatic_strategies_names();
         $setting = new admin_setting_configselect('local_bulk_roles_importer/roleretrievalsource',
             new lang_string('label:rolesretrievalsource', 'local_bulk_roles_importer'),
             new lang_string('label:rolesretrievalsourcedescription', 'local_bulk_roles_importer'),
