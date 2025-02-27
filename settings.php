@@ -43,39 +43,15 @@ if ($hassiteconfig) {
             $rolesretrievaloptions);
         $settings->add($setting);
 
-        $task = core\task\manager::get_scheduled_task('\local_bulk_roles_importer\task\import_roles');
-
-        set_config(
-            'taskruntimeenabled',
-            !$task->get_disabled(),
-            'local_bulk_roles_importer'
-        );
-        $setting = new admin_setting_configcheckbox(
-            'local_bulk_roles_importer/taskruntimeenabled',
-            new lang_string('label:taskruntimeenabled', 'local_bulk_roles_importer'),
-            new lang_string('label:taskruntimeenableddescription', 'local_bulk_roles_importer'),
-            '0',
-        );
-        $settings->add($setting);
-
-        set_config(
-            'taskruntimehour',
-            $task->get_hour(),
-            'local_bulk_roles_importer',
-        );
-        set_config(
-            'taskruntimeminute',
-            $task->get_minute(),
-            'local_bulk_roles_importer',
-        );
-        $setting = new admin_setting_configtime(
-            'local_bulk_roles_importer/taskruntimehour',
-            'local_bulk_roles_importer/taskruntimeminute',
-            new lang_string('label:taskruntime', 'local_bulk_roles_importer'),
-            new lang_string('label:taskruntimedescription', 'local_bulk_roles_importer'),
-            ['h' => 4, 'm' => 0],
-        );
-        $settings->add($setting);
+        $taskurl = new moodle_url('/admin/tool/task/scheduledtasks.php', [
+            'action' => 'edit',
+            'task' => 'local_bulk_roles_importer\task\import_roles'
+        ]);
+        $settings->add(new admin_setting_configempty(
+            'local_bulk_roles_importer/tasklink',
+            new lang_string('label:scheduledtasksettings', 'local_bulk_roles_importer'),
+            html_writer::link($taskurl, new lang_string('label:scheduledtasksettingsdescription', 'local_bulk_roles_importer'))
+        ));
 
         require_once(__DIR__ . "/settings/settings_github.php");
         require_once(__DIR__ . "/settings/settings_gitlab.php");
