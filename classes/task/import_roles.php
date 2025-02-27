@@ -17,9 +17,9 @@
 namespace local_bulk_roles_importer\task;
 
 /**
- * Task to import roles from GitLab repository.
+ * Task to import roles from selected source.
  *
- * File         gitlab_roles_import.php
+ * File         import_roles.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Defiled CRON jobs for local_bulk_roles_importer plugin.
+ * Defined CRON jobs for local_bulk_roles_importer plugin.
  *
  * File         tasks.php
  * Encoding     UTF-8

@@ -30,7 +30,7 @@ namespace local_bulk_roles_importer\util;
  */
 
 /**
- * Roles importing strategy for GitLab.
+ * Roles importer strategies manager.
  */
 class roles_importer_strategies_manager {
 
