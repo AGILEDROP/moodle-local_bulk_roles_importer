@@ -17,9 +17,9 @@
 namespace local_bulk_roles_importer\util;
 
 /**
- * Strategy to import roles from GitLab repository.
+ * Strategy to import roles from GitHub repository.
  *
- * File         gitlab_roles_importer_strategy.php
+ * File         github_roles_importer_strategy.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
@@ -30,31 +30,31 @@ namespace local_bulk_roles_importer\util;
  */
 
 /**
- * Roles importing strategy for GitLab.
+ * Roles importing strategy for GitHub.
  */
-class gitlab_roles_importer_strategy implements roles_importer_strategy_interface {
+class github_roles_importer_strategy implements roles_importer_strategy_interface {
 
-    /** @var gitlab_api $gitlab Gitlab Api instance. */
-    private gitlab_api $gitlab;
+    /** @var github_api $github GitHub Api instance. */
+    private github_api $github;
 
     /**
      * Constructor.
      */
     public function __construct() {
-        $this->gitlab = new gitlab_api();
+        $this->github = new github_api();
     }
 
     public function get_name(): string
     {
-        return 'gitlab';
+        return 'github';
     }
 
     public function get_last_updated(): int {
-        return $this->gitlab->get_master_branch_last_updated();
+        return $this->github->get_master_branch_last_updated();
     }
 
     public function get_roles(): array {
-        return $this->gitlab->get_roles();
+        return $this->github->get_roles();
     }
 
 }

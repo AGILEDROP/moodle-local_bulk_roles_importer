@@ -38,23 +38,13 @@ class roles_importer_strategies_manager {
     private static array $roles_importer_strategies = [
         'github' => [
             'name' => 'Github',
-            'class' => gitlab_roles_importer_strategy::class,
+            'class' => github_roles_importer_strategy::class,
             'automatic' => true,
         ],
         'gitlab' => [
             'name' => 'Gitlab',
             'class' => gitlab_roles_importer_strategy::class,
             'automatic' => true,
-        ],
-        'bitbucket' => [
-            'name' => 'Bitbucket',
-            'class' => gitlab_roles_importer_strategy::class,
-            'automatic' => true,
-        ],
-        'file' => [
-            'name' => 'File',
-            'class' => gitlab_roles_importer_strategy::class,
-            'automatic' => false,
         ],
     ];
 

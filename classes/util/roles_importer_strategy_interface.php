@@ -44,9 +44,9 @@ interface roles_importer_strategy_interface {
     /**
      * Returns timestamp of last update at the source.
      *
-     * @return string
+     * @return int
      */
-    public function get_last_updated(): string;
+    public function get_last_updated(): int;
 
     /**
      * Returns an array of roles.

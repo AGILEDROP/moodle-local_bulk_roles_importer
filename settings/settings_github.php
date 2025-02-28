@@ -46,7 +46,7 @@ $setting = new admin_setting_configtext(
         'local_bulk_roles_importer/githuburl',
         new lang_string('label:githuburl', 'local_bulk_roles_importer'),
         new lang_string('label:githuburl_help', 'local_bulk_roles_importer'),
-        'https://github.com'
+        'https://api.github.com'
 );
 $settings->add($setting);
 $settings->hide_if('local_bulk_roles_importer/githuburl',
