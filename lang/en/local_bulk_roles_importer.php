@@ -66,4 +66,5 @@ $string['label:scheduledtasksettingsdescription'] = 'Go to scheduled task settin
 $string['label:taskgitlabroles'] = 'Bulk Roles Importer - Import roles from GitLab.';
 $string['label:taskimportroles'] = 'Bulk Roles Importer - Import roles from selected source.';
 $string['pluginname'] = 'Bulk Roles Importer';
-$string['settings:pagetitle'] = 'Bulk Roles Importer Settings';
+$string['settings:pagetitlefile'] = 'Import roles from a file';
+$string['settings:pagetitlemain'] = 'Bulk roles importer settings';

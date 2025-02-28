@@ -35,8 +35,8 @@ $setting = new admin_setting_heading(
         new lang_string('header:bitbucket', 'local_bulk_roles_importer'),
         new lang_string('header:bitbucketinfo', 'local_bulk_roles_importer'),
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/bitbucket_roles',
+$settings_main->add($setting);
+$settings_main->hide_if('local_bulk_roles_importer/bitbucket_roles',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'bitbucket');
@@ -48,8 +48,8 @@ $setting = new admin_setting_configtext(
         new lang_string('label:bitbucketurl_help', 'local_bulk_roles_importer'),
         'https://bitbucket.com'
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/bitbucketurl',
+$settings_main->add($setting);
+$settings_main->hide_if('local_bulk_roles_importer/bitbucketurl',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'bitbucket');
@@ -61,8 +61,8 @@ $setting = new admin_setting_configtext(
     new lang_string('label:bitbuckettoken_help', 'local_bulk_roles_importer'),
     ''
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/bitbuckettoken',
+$settings_main->add($setting);
+$settings_main->hide_if('local_bulk_roles_importer/bitbuckettoken',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'bitbucket');
@@ -74,8 +74,8 @@ $setting = new admin_setting_configtext(
         new lang_string('label:bitbucketproject_help', 'local_bulk_roles_importer'),
         'moodle/template-01/roles'
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/bitbucketproject',
+$settings_main->add($setting);
+$settings_main->hide_if('local_bulk_roles_importer/bitbucketproject',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'bitbucket');
@@ -87,8 +87,8 @@ $setting = new admin_setting_configtext(
     new lang_string('label:bitbucketmaster_help', 'local_bulk_roles_importer'),
     'main'
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/bitbucketmaster',
+$settings_main->add($setting);
+$settings_main->hide_if('local_bulk_roles_importer/bitbucketmaster',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'bitbucket');

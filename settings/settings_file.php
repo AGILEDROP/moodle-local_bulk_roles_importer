@@ -35,8 +35,8 @@ $setting = new admin_setting_heading(
         new lang_string('header:file', 'local_bulk_roles_importer'),
         new lang_string('header:fileinfo', 'local_bulk_roles_importer'),
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/file_roles',
+$settings_file->add($setting);
+$settings_file->hide_if('local_bulk_roles_importer/file_roles',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'file');
@@ -48,8 +48,13 @@ $setting = new admin_setting_configstoredfile(
         new lang_string('label:filesource_help', 'local_bulk_roles_importer'),
         'local_bulk_roles_importer_roles_file',
 );
-$settings->add($setting);
-$settings->hide_if('local_bulk_roles_importer/filesource',
+$settings_file->add($setting);
+$settings_file->hide_if('local_bulk_roles_importer/filesource',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'file');
+$settings_file->set_updatecallback(
+    function() {
+        set_config('filesource', null, 'local_bulk_roles_importer');
+    }
+);

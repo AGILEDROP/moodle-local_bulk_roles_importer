@@ -23,39 +23,28 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use local_bulk_roles_importer\util\roles_importer_strategies_manager;
-
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $settings = new admin_settingpage(
-        'local_bulk_roles_importer_settings',
-        new lang_string('settings:pagetitle', 'local_bulk_roles_importer')
+    $settings_main = new admin_settingpage(
+        'local_bulk_roles_importer_settings_main',
+        new lang_string('settings:pagetitlemain', 'local_bulk_roles_importer')
     );
-    $ADMIN->add('localplugins', $settings);
+    $ADMIN->add('localplugins', $settings_main);
+    $settings_file = new admin_settingpage(
+        'local_bulk_roles_importer_settings_file',
+        new lang_string('settings:pagetitlefile', 'local_bulk_roles_importer')
+    );
+    $ADMIN->add('localplugins', $settings_file);
 
     if ($ADMIN->fulltree) {
-        $rolesretrievaloptions = roles_importer_strategies_manager::get_automatic_strategies_names();
-        $setting = new admin_setting_configselect('local_bulk_roles_importer/roleretrievalsource',
-            new lang_string('label:rolesretrievalsource', 'local_bulk_roles_importer'),
-            new lang_string('label:rolesretrievalsourcedescription', 'local_bulk_roles_importer'),
-            "github",
-            $rolesretrievaloptions);
-        $settings->add($setting);
-
-        $taskurl = new moodle_url('/admin/tool/task/scheduledtasks.php', [
-            'action' => 'edit',
-            'task' => 'local_bulk_roles_importer\task\import_roles'
-        ]);
-        $settings->add(new admin_setting_configempty(
-            'local_bulk_roles_importer/tasklink',
-            new lang_string('label:scheduledtasksettings', 'local_bulk_roles_importer'),
-            html_writer::link($taskurl, new lang_string('label:scheduledtasksettingsdescription', 'local_bulk_roles_importer'))
-        ));
-
+        // Main settings page
+        require_once(__DIR__ . "/settings/settings_main.php");
         require_once(__DIR__ . "/settings/settings_github.php");
         require_once(__DIR__ . "/settings/settings_gitlab.php");
         require_once(__DIR__ . "/settings/settings_bitbucket.php");
+
+        // File import settings page
         require_once(__DIR__ . "/settings/settings_file.php");
     }
 }
