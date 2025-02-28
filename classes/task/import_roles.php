@@ -31,6 +31,7 @@ namespace local_bulk_roles_importer\task;
 
 use core\task\scheduled_task;
 use local_bulk_roles_importer\roles_importer;
+use local_bulk_roles_importer\util\roles_importer_strategies_manager;
 
 /**
  * Define scheduled task for check Moodle users for system roles.
@@ -47,6 +48,12 @@ class import_roles extends scheduled_task {
      * Execute scheduled task.
      */
     public function execute() {
+        $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
+        if (!roles_importer_strategies_manager::is_strategy_automatic($strategy)) {
+            mtrace('ERROR - source: ' . $strategy . ' is not automatic');
+            return;
+        }
+
         $roles_importer = new roles_importer();
         $roles_importer->import_roles();
     }

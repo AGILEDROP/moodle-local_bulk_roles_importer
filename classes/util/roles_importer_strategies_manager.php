@@ -91,4 +91,15 @@ class roles_importer_strategies_manager {
         return array_map($mapfunction, self::$roles_importer_strategies);
     }
 
+    /**
+     * Get all strategies classes.
+     *
+     * @return bool
+     */
+    public static function is_strategy_automatic($strategy): bool
+    {
+        $isautomatic = self::$roles_importer_strategies[$strategy]['automatic'] ?? false;
+        return $isautomatic;
+    }
+
 }
