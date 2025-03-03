@@ -67,8 +67,10 @@ class roles_importer {
     /**
      * Execute scheduled task.
      */
-    public function import_roles() {
-        $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
+    public function import_roles($strategy = null) {
+        if ($strategy === null) {
+            $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
+        }
 
         mtrace('=======================================================================================================');
         mtrace('  IMPORT ROLES FROM SOURCE: ' . $strategy);

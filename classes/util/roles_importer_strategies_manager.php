@@ -46,6 +46,11 @@ class roles_importer_strategies_manager {
             'class' => gitlab_roles_importer_strategy::class,
             'automatic' => true,
         ],
+        'zipball' => [
+            'name' => 'Zip',
+            'class' => zipball_roles_importer_strategy::class,
+            'automatic' => false,
+        ],
     ];
 
     /**

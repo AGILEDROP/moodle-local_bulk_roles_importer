@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,20 +12,24 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Events for local_bulk_roles_importer plugin.
  *
  * @package     local_bulk_roles_importer
+ * @category    admin
  * @copyright   2025 Your Name <developer@agiledrop.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_bulk_roles_importer';
-$plugin->release = '0.1.0';
-$plugin->version = 2025030300;
-$plugin->requires = 2022041900;
-$plugin->maturity = MATURITY_ALPHA;
+$observers = [
+    [
+        'eventname' => '\core\event\config_log_created',
+        'callback'  => 'local_bulk_roles_importer_observer::import_roles_from_file_and_remove_file_from_config',
+        'internal'  => false,
+        'priority'  => 1000,
+    ],
+];

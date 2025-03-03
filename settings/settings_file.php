@@ -53,8 +53,3 @@ $settings_file->hide_if('local_bulk_roles_importer/filesource',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'file');
-$settings_file->set_updatecallback(
-    function() {
-        set_config('filesource', null, 'local_bulk_roles_importer');
-    }
-);
