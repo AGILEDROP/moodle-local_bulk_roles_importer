@@ -25,6 +25,10 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+
+$string['form:description'] = 'Description';
+$string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP containing XML files in the root directory, or a ZIP file containing one folder that contains the XML files.';
+$string['form:import'] = 'Import';
 $string['header:bitbucket'] = 'Bitbucket';
 $string['header:bitbucketinfo'] = 'Enter Bitbucket info data to import roles from repository.';
 $string['header:file'] = 'File';
@@ -33,6 +37,7 @@ $string['header:github'] = 'Github';
 $string['header:githubinfo'] = 'Enter Github info data to import roles from repository.';
 $string['header:gitlab'] = 'Gitlab';
 $string['header:gitlabinfo'] = 'Enter Gitlab info data to import roles from repository.';
+$string['import:runsuccesslogheader'] = 'Import log';
 $string['label:bitbucketmaster'] = 'Master branch';
 $string['label:bitbucketmaster_help'] = 'Enter Bitbucket master branch name.';
 $string['label:bitbucketproject'] = 'Project';

@@ -29,7 +29,9 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use moodle_exception;
 use stdClass;
+use ZipArchive;
 
 /**
  * Roles importing strategy for Zipball file.
@@ -47,38 +49,87 @@ class zipball_roles_importer_strategy implements roles_importer_strategy_interfa
 
     public function get_roles(): array {
         $roles = [];
-        $zipball = get_config('local_bulk_roles_importer/filesource');
+        $importfiledir = make_upload_directory('local_bulk_roles_importer');
+        $importfilepath = $importfiledir  . DIRECTORY_SEPARATOR . "import_roles_file";
+        $extractedfolder = false;
+        $filepaths = [];
 
-        $files = "TODO: get files list";
+        // Prepare files
+        $zip = new ZipArchive;
+        if ($zip->open($importfilepath) === TRUE) {
+            $extractedfolder = $importfiledir  . DIRECTORY_SEPARATOR . "extracted_files";
+            mkdir($extractedfolder, 0777, true);
+            $zip->extractTo($extractedfolder);
+            $zip->close();
 
-//        foreach ($files as $file) {
-//            $fileinfo = pathinfo($file->path);
-//            $filetype = $fileinfo['extension'] ?? '';
-//
-//            if ($filetype != 'xml') {
-//                continue;
-//            }
-//
-//            $file_data = "TODO: get file data from $file";
-//
-//            $xml = $file_data->TODOgetXMLstring;
-//            $xmlstring = simplexml_load_string($xml);
-//
-//            $json = json_encode($xmlstring);
-//            $jsondata = json_decode($json, true);
-//            $shortname = $jsondata['shortname'] ?? false;
-//
-//            $role = new stdClass();
-//            $role->shortname = $shortname;
-//            $role->lastchange = time();
-//            $role->xml = $xml;
-//
-//            $roles[] = $role;
-//        }
-//
-//        // TODO: remove file from config
+            $files = array_diff(scandir($extractedfolder), array('..', '.'));
+            if (count($files) === 1) {
+                $singleitem = reset($files);
+                $singleitempath = $extractedfolder . DIRECTORY_SEPARATOR . $singleitem;
+                if (is_dir($singleitempath)) {
+                    $extractedfolder = $singleitempath;
+                }
+            }
+
+            foreach (scandir($extractedfolder) as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'xml') {
+                    $filepaths[] = $extractedfolder . DIRECTORY_SEPARATOR . $file;
+                }
+            }
+        } elseif (simplexml_load_file($importfilepath)) {
+            $filepaths[] = $importfilepath;
+        } else {
+            unlink($importfilepath);
+            throw new moodle_exception('Invalid file format. Must be an XML or a ZIP containing XML files.');
+        }
+
+        // Process XML files
+        foreach ($filepaths as $filepath) {
+            $xmlobject = simplexml_load_file($filepath);
+            if ($xmlobject) {
+                $json = json_encode($xmlobject);
+                $jsondata = json_decode($json, true);
+                $shortname = $jsondata['shortname'] ?? false;
+
+                $role = new stdClass();
+                $role->shortname = $shortname;
+                $role->lastchange = time();
+                $role->xml = file_get_contents($filepath);
+
+                $roles[] = $role;
+            }
+        }
+
+        // Cleanup - Delete file and extracted files
+        unlink($importfilepath);
+        if ($extractedfolder) {
+            $this->delete_directory_recursively($extractedfolder);
+        }
 
         return $roles;
+    }
+
+    /**
+     * Remove directory and all its contents recursively.
+     */
+    private function delete_directory_recursively(string $dirpath): void {
+        if (is_dir($dirpath)) {
+            $objects = scandir($dirpath);
+            foreach ($objects as $object) {
+                if ($object != "." && $object != "..") {
+                    if (
+                        is_dir($dirpath. DIRECTORY_SEPARATOR .$object)
+                        && !is_link($dirpath. DIRECTORY_SEPARATOR .$object)
+                    ) {
+                        $this->delete_directory_recursively($dirpath. DIRECTORY_SEPARATOR .$object);
+                    }
+                    else {
+                        unlink($dirpath. DIRECTORY_SEPARATOR .$object);
+                    }
+                }
+            }
+            rmdir($dirpath);
+        }
     }
 
 }

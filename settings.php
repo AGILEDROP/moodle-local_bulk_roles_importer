@@ -30,12 +30,16 @@ if ($hassiteconfig) {
         'local_bulk_roles_importer_settings_main',
         new lang_string('settings:pagetitlemain', 'local_bulk_roles_importer')
     );
-    $ADMIN->add('localplugins', $settings_main);
-    $settings_file = new admin_settingpage(
-        'local_bulk_roles_importer_settings_file',
-        new lang_string('settings:pagetitlefile', 'local_bulk_roles_importer')
+    $ADMIN->add('roles', $settings_main);
+
+    $ADMIN->add(
+        'roles',
+        new admin_externalpage(
+            'local_bulk_roles_importer_settings_file',
+            new lang_string('settings:pagetitlefile', 'local_bulk_roles_importer'),
+            "$CFG->wwwroot/local/bulk_roles_importer/import_from_file.php"
+        )
     );
-    $ADMIN->add('localplugins', $settings_file);
 
     if ($ADMIN->fulltree) {
         // Main settings page
@@ -43,8 +47,5 @@ if ($hassiteconfig) {
         require_once(__DIR__ . "/settings/settings_github.php");
         require_once(__DIR__ . "/settings/settings_gitlab.php");
         require_once(__DIR__ . "/settings/settings_bitbucket.php");
-
-        // File import settings page
-        require_once(__DIR__ . "/settings/settings_file.php");
     }
 }

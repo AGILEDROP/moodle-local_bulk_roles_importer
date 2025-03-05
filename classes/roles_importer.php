@@ -71,6 +71,10 @@ class roles_importer {
         if ($strategy === null) {
             $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         }
+        if (!class_exists($this->rolesimportstrategies[$strategy])) {
+            mtrace('ERROR - source: ' . $strategy . ' does not exist');
+            return;
+        }
 
         mtrace('=======================================================================================================');
         mtrace('  IMPORT ROLES FROM SOURCE: ' . $strategy);
@@ -78,10 +82,6 @@ class roles_importer {
 
         $this->lastimport = $this->rolemanager->get_lastimport();
 
-        if (!class_exists($this->rolesimportstrategies[$strategy])) {
-            mtrace('ERROR - source: ' . $strategy . ' does not exist');
-            return;
-        }
         $this->rolesimportstrategy = new $this->rolesimportstrategies[$strategy]();
         $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
