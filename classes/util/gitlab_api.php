@@ -29,195 +29,51 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use dml_exception;
-use stdClass;
+use CurlHandle;
 
 /**
  * Definition class for Gitlab API.
  */
 final class gitlab_api extends gitprovider_api {
 
-    /** @var string $url Url link to root of repositories. */
-    private $url;
-
-    /** @var string $token Access token, generated in Gitlab account settings. */
-    private $token;
-
-    /** @var string $project Project name. */
-    private $project;
-
-    /** @var string $masterbranch Master/main branch name. */
-    private $masterbranch;
-
-    /** @var bool $error Has error. */
-    private $error;
-
-    /** @var int $errorcode Error code. */
-    private $errorcode;
-
-    /** @var string $errormessage Error message. */
-    private $errormessage;
-
     /**
-     * Construct method.
+     * {@inheritdoc}
      */
-    public function __construct() {
-        $this->set_url();
-        $this->set_token();
-        $this->set_project();
-        $this->set_masterbranch();
-        $this->set_error(false);
-
-        parent::__construct();
-    }
-
-    /**
-     * Set url.
-     *
-     * @return void
-     * @throws dml_exception
-     */
-    private function set_url(): void {
+    final function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'gitlaburl');
     }
 
     /**
-     * Get url.
-     *
-     * @return string
+     * {@inheritdoc}
      */
-    private function get_url(): string {
-        return $this->url;
-    }
-
-    /**
-     * Set access token.
-     *
-     * @return void
-     */
-    private function set_token(): void {
+    final function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
     }
 
     /**
-     * Get access token.
-     *
-     * @return string
+     * {@inheritdoc}
      */
-    private function get_token(): string {
-        return $this->token;
-    }
-
-    /**
-     * Set project name.
-     *
-     * @return void
-     * @throws dml_exception
-     */
-    private function set_project(): void {
+    final function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'gitlabproject');
         $this->project = urlencode($project);
     }
 
     /**
-     * Get project name.
-     *
-     * @return string
+     * {@inheritdoc}
      */
-    private function get_project(): string {
-        return $this->project;
-    }
-
-    /**
-     * Set master/main branch name.
-     *
-     * @return void
-     * @throws dml_exception
-     */
-    private function set_masterbranch():void {
+    final function set_masterbranch():void {
         $this->masterbranch = get_config('local_bulk_roles_importer', 'gitlabmaster');
     }
 
     /**
-     * Get master/main branch name.
-     *
-     * @return string
+     * {@inheritdoc}
      */
-    private function get_masterbranch(): string {
-        return $this->masterbranch;
-    }
-
-    /**
-     * Set error.
-     *
-     * @param bool $error
-     * @return void
-     */
-    private function set_error($error): void {
-        $this->error = $error;
-    }
-
-    /**
-     * Get error.
-     *
-     * @return bool
-     */
-    private function get_error(): bool {
-        return $this->error;
-    }
-
-    /**
-     * Set error code.
-     *
-     * @param int $code Error code.
-     * @return void
-     */
-    private function set_errorcode($code): void {
-        $this->errorcode = $code;
-    }
-
-    /**
-     * Get error code.
-     *
-     * @return int
-     */
-    private function get_errorcode(): int {
-        return $this->errorcode;
-    }
-
-    /**
-     * Set error message.
-     *
-     * @param string $message Error message.
-     * @return void
-     */
-    private function set_errormessage($message): void {
-        $this->errormessage = $message;
-    }
-
-    /**
-     * Get error message.
-     *
-     * @return string
-     */
-    private function get_errormessage(): string {
-        return $this->errormessage;
-    }
-
-    /**
-     * Get json decoded response from given url or false.
-     *
-     * @param string $url Url.
-     * @return bool|string
-     */
-    private function get_data($url): bool|string {
-
+    final function get_curl($url): CurlHandle|false {
         $headers = [
             'PRIVATE-TOKEN: ' . $this->get_token(),
         ];
         // Set request options.
-        $handler = curl_init();
-        curl_setopt($handler, CURLOPT_URL, $url);
+        $handler = curl_init($url);
         curl_setopt($handler, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($handler, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($handler, CURLOPT_POST, false);
@@ -225,94 +81,38 @@ final class gitlab_api extends gitprovider_api {
         curl_setopt($handler, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($handler, CURLOPT_TIMEOUT, 30);
 
-        $data = curl_exec($handler);
-
-        $json = json_decode($data);
-
-        $responsecode = curl_getinfo($handler, CURLINFO_HTTP_CODE);
-
-        if ($responsecode != 200) {
-            $message = $json->message ?? 'unknown error';
-            $this->set_error(true);
-            $this->set_errorcode($responsecode);
-            $this->set_errormessage($message);
-
-            return false;
-        }
-
-        return $data;
-
+        return $handler;
     }
 
     /**
-     * Get array of branches or false.
-     *
-     * @return false|mixed
+     * {@inheritdoc}
      */
-    private function get_branches(): array|false {
+    final function get_branches_url(): string {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
         $url .= '/repository/branches';
 
-        $branches = $this->get_data($url);
-
-        if (!$branches) {
-            return false;
-        }
-
-        return json_decode($branches);
+        return $url;
     }
 
     /**
-     * Get selected branch info or false.
-     *
-     * @param string $name Branch name.
-     * @return false|mixed
+     * {@inheritdoc}
      */
-    public function get_branch($name): array|false {
-        $branches = $this->get_branches();
-        if (!$branches) {
-            return false;
-        }
-
-        foreach ($branches as $branch) {
-            if ($branch->name == $name) {
-                return $branch;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Get timestamp of master branch last updated time or false.
-     *
-     * @return false|int
-     */
-    public function get_master_branch_last_updated(): false|int {
+    final function get_master_branch_last_updated_timestamp(): false|string {
         $masterbranch = $this->get_masterbranch();
         $branch = $this->get_branch($masterbranch);
         if (!$branch) {
             return false;
         }
 
-        $timestammp = $branch->commit->created_at ?? false;
-
-        if (!$timestammp) {
-            return false;
-        }
-
-        return strtotime($timestammp);
+        return $branch->commit->created_at ?? false;
     }
 
     /**
-     * Get files list for selected branch, by default from master branch.
-     *
-     * @param $branch
-     * @return false|mixed
+     * {@inheritdoc}
      */
-    public function get_files($branch = false): array|false {
+    public function get_files($branch = false): false|array {
 
         if (!$branch) {
             $branch = $this->get_masterbranch();
@@ -340,11 +140,7 @@ final class gitlab_api extends gitprovider_api {
     }
 
     /**
-     * Get file content for selected filepath and branch.
-     * @param string $branch Branch name.
-     * @param string $filepath File path.
-     *
-     * @return bool|string
+     * {@inheritdoc}
      */
     public function get_file_content($branch, $filepath): false|string {
         $url = $this->get_url();
@@ -357,13 +153,9 @@ final class gitlab_api extends gitprovider_api {
     }
 
     /**
-     * Get timestamp for last commit or 0.
-     *
-     * @param $filepath
-     * @return false|int
+     * {@inheritdoc}
      */
-    private function get_file_last_commit($filepath): false|int {
-
+    final function get_file_last_commit_url($filepath): string {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
@@ -371,57 +163,6 @@ final class gitlab_api extends gitprovider_api {
         $url .= '/blame?ref=';
         $url .= $this->get_masterbranch();
 
-        $data = $this->get_data($url);
-
-        $json = json_decode($data);
-
-        $lastpart = end($json);
-        $date = $lastpart->commit->committed_date ?? false;
-
-        if (!$date) {
-            return 0;
-        }
-
-        return strtotime($date);
-    }
-
-    /**
-     * Get array of roles.
-     *
-     * @return array
-     */
-    public function get_roles(): array {
-        $roles = [];
-        $files = $this->get_files();
-
-        if (!$files) {
-            return $roles;
-        }
-
-        foreach ($files as $file) {
-            $fileinfo = pathinfo($file->path);
-            $filetype = $fileinfo['extension'] ?? '';
-
-            if ($filetype != 'xml') {
-                continue;
-            }
-
-            $lastcommit = $this->get_file_last_commit($file->path);
-            $xml = $this->get_file_content($this->get_masterbranch(), $file->path);
-            $xmlstring = simplexml_load_string($xml);
-
-            $json = json_encode($xmlstring);
-            $jsondata = json_decode($json, true);
-            $shortname = $jsondata['shortname'] ?? false;
-
-            $role = new stdClass();
-            $role->shortname = $shortname;
-            $role->lastchange = $lastcommit;
-            $role->xml = $xml;
-
-            $roles[] = $role;
-        }
-
-        return $roles;
+        return $url;
     }
 }

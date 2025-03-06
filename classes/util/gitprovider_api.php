@@ -29,6 +29,7 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use CurlHandle;
 use dml_exception;
 use stdClass;
 
@@ -38,16 +39,16 @@ use stdClass;
 abstract class gitprovider_api implements gitprovider_api_interface {
 
     /** @var string $url Url link to root of repositories. */
-    private $url;
+    protected $url;
 
     /** @var string $token Access token, generated in Git provider account settings. */
-    private $token;
+    protected $token;
 
     /** @var string $project Project name. */
-    private $project;
+    protected $project;
 
     /** @var string $masterbranch Master/main branch name. */
-    private $masterbranch;
+    protected $masterbranch;
 
     /** @var bool $error Has error. */
     private $error;
@@ -75,7 +76,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return void
      * @throws dml_exception
      */
-    private function set_url(): void {
+    protected function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'githuburl');
     }
 
@@ -84,7 +85,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    private function get_url(): string {
+    protected function get_url(): string {
         return $this->url;
     }
 
@@ -93,8 +94,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return void
      */
-    private function set_token(): void {
-        $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
+    protected function set_token(): void {
+        // This has to be implemented in child class.
+        $this->token = '';
     }
 
     /**
@@ -102,7 +104,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    private function get_token(): string {
+    protected function get_token(): string {
         return $this->token;
     }
 
@@ -112,8 +114,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return void
      * @throws dml_exception
      */
-    private function set_project(): void {
-        $project = get_config('local_bulk_roles_importer', 'githubproject');
+    protected function set_project(): void {
+        // This has to be implemented in child class.
+        $project = '';
         $this->project = urlencode($project);
     }
 
@@ -122,7 +125,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    private function get_project(): string {
+    protected function get_project(): string {
         return $this->project;
     }
 
@@ -132,8 +135,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return void
      * @throws dml_exception
      */
-    private function set_masterbranch(): void {
-        $this->masterbranch = get_config('local_bulk_roles_importer', 'githubmaster');
+    protected function set_masterbranch(): void {
+        // This has to be implemented in child class.
+        $this->masterbranch = '';
     }
 
     /**
@@ -141,7 +145,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    private function get_masterbranch(): string {
+    protected function get_masterbranch(): string {
         return $this->masterbranch;
     }
 
@@ -151,7 +155,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param bool $error
      * @return void
      */
-    private function set_error($error): void {
+    protected function set_error($error): void {
         $this->error = $error;
     }
 
@@ -160,7 +164,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return bool
      */
-    private function get_error(): bool {
+    protected function get_error(): bool {
         return $this->error;
     }
 
@@ -170,7 +174,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param int $code Error code.
      * @return void
      */
-    private function set_errorcode($code): void {
+    protected function set_errorcode($code): void {
         $this->errorcode = $code;
     }
 
@@ -179,7 +183,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return int
      */
-    private function get_errorcode(): int {
+    protected function get_errorcode(): int {
         return $this->errorcode;
     }
 
@@ -189,7 +193,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param string $message Error message.
      * @return void
      */
-    private function set_errormessage($message): void {
+    protected function set_errormessage($message): void {
         $this->errormessage = $message;
     }
 
@@ -198,8 +202,19 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    private function get_errormessage(): string {
+    protected function get_errormessage(): string {
         return $this->errormessage;
+    }
+
+    /**
+     * Get curl response from given url or false.
+     *
+     * @param string $url Url.
+     * @return array
+     */
+    protected function get_curl($url): CurlHandle|false {
+        // This has to be implemented in child class.
+        return curl_init($url);
     }
 
     /**
@@ -208,27 +223,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param string $url Url.
      * @return bool|string
      */
-    private function get_data($url): bool|string {
-
-        $url = urldecode($url);
-        $headers = [
-            'Authorization: Bearer ' . $this->get_token(),
-            'Accept: application/vnd.github+json',
-            'X-GitHub-Api-Version: 2022-11-28',
-        ];
-        // Set request options.
-        $handler = curl_init();
-        curl_setopt($handler, CURLOPT_URL, $url);
-        curl_setopt($handler, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($handler, CURLOPT_USERAGENT, 'moodle-local_bulk_roles_importer');
-        curl_setopt($handler, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($handler, CURLOPT_POST, false);
-        curl_setopt($handler, CURLOPT_HTTPHEADER, array_values($headers));
-        curl_setopt($handler, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($handler, CURLOPT_TIMEOUT, 30);
-
+    protected function get_data($url): bool|string {
+        $handler = $this->get_curl($url);
         $data = curl_exec($handler);
-
         $json = json_decode($data);
 
         $responsecode = curl_getinfo($handler, CURLINFO_HTTP_CODE);
@@ -243,7 +240,16 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         }
 
         return $data;
+    }
 
+    /**
+     * Get branches url
+     *
+     * @return string
+     */
+    protected function get_branches_url(): string {
+        // This has to be implemented in child class.
+        return '';
     }
 
     /**
@@ -251,12 +257,8 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return false|array
      */
-    private function get_branches(): false|array {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/branches';
-
+    protected function get_branches(): false|array {
+        $url = $this->get_branches_url();
         $branches = $this->get_data($url);
 
         if (!$branches) {
@@ -266,7 +268,10 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return json_decode($branches);
     }
 
-    public function get_branch($name): false|array {
+    /**
+     * {@inheritdoc}
+     */
+    public function get_branch($name): false|stdClass {
         $branches = $this->get_branches();
         if (!$branches) {
             return false;
@@ -281,17 +286,21 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return false;
     }
 
+    /**
+     * Return last commit timestamp from master branch.
+     *
+     * @return string|false
+     */
+    protected function get_master_branch_last_updated_timestamp(): false|string {
+        // This has to be implemented in child class.
+        return 0;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function get_master_branch_last_updated(): false|int {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/commits/';
-        $url .= $this->get_masterbranch();
-
-        $commit = $this->get_data($url);
-        $commit = json_decode($commit);
-
-        $timestamp = $commit->commit->author->date ?? false;
+        $timestamp = $this->get_master_branch_last_updated_timestamp();
 
         if (!$timestamp) {
             return false;
@@ -300,44 +309,31 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return strtotime($timestamp);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function get_files($branch = false): false|array {
-
-        if (!$branch) {
-            $branch = $this->get_masterbranch();
-        }
-
-        if (!$branch) {
-            return false;
-        }
-
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/git/trees/' . $branch;
-
-        $files = $this->get_data($url);
-
-        if (!$files) {
-            return false;
-        }
-
-        $files = json_decode($files);
-
-        return $files;
+        // This has to be implemented in child class.
+        return [];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function get_file_content($branch, $filepath): false|string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/contents/' . $filepath;
-        $url .= '?ref=' . $branch;
+        // This has to be implemented in child class.
+        return '';
+    }
 
-        $data = $this->get_data($url);
-        $json = json_decode($data);
-        $content_base46 = $json->content;
-
-        return base64_decode($content_base46);
+    /**
+     * Return last commited version of file url.
+     *
+     * @param $filepath
+     * @return false|int
+     */
+    protected function get_file_last_commit_url($filepath): string {
+        // This has to be implemented in child class.
+        return '';
     }
 
     /**
@@ -346,16 +342,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param $filepath
      * @return false|int
      */
-    private function get_file_last_commit($filepath): false|int {
-
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/commits?path=' . $filepath;
-        $url .= '&ref=' . $this->get_masterbranch();
-
+    protected function get_file_last_commit($filepath): false|int {
+        $url = $this->get_file_last_commit_url($filepath);
         $data = $this->get_data($url);
-
         $json = json_decode($data);
 
         $lastpart = end($json);
@@ -368,6 +357,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return strtotime($date);
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function get_roles(): array {
         $roles = [];
         $files = $this->get_files();
@@ -376,7 +368,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
             return $roles;
         }
 
-        foreach ($files->tree as $file) {
+        foreach ($files as $file) {
             $fileinfo = pathinfo($file->path);
             $filetype = $fileinfo['extension'] ?? '';
 

@@ -41,9 +41,9 @@ interface gitprovider_api_interface {
      * Get selected branch info or false.
      *
      * @param string $name Branch name.
-     * @return false|mixed
+     * @return false|stdClass
      */
-    public function get_branch($name): array|false;
+    public function get_branch($name): stdClass|false;
 
     /**
      * Get timestamp of master branch last updated time or false.
