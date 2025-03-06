@@ -19,7 +19,8 @@
  *
  * @package     local_bulk_roles_importer
  * @category    admin
- * @copyright   2025 Your Name <developer@agiledrop.com>
+ * @copyright   Agiledrop, 2025
+ * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

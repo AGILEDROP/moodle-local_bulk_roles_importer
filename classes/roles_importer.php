@@ -25,7 +25,7 @@ namespace local_bulk_roles_importer;
  * @package     local_bulk_roles_importer
  *
  * @copyright   Agiledrop, 2025
- * @author      Agiledrop 2024 <developer@agiledrop.com>
+ * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
