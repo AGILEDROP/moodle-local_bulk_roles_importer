@@ -17,9 +17,9 @@
 namespace local_bulk_roles_importer\util;
 
 /**
- * Utility class - GitLab API.
+ * Abstract class - Git provider API.
  *
- * File         gitlab_api.php
+ * File         gitprovider_api.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
@@ -33,14 +33,14 @@ use dml_exception;
 use stdClass;
 
 /**
- * Definition class for Gitlab API.
+ * Definition class for Git provider API.
  */
-final class gitlab_api extends gitprovider_api {
+abstract class gitprovider_api implements gitprovider_api_interface {
 
     /** @var string $url Url link to root of repositories. */
     private $url;
 
-    /** @var string $token Access token, generated in Gitlab account settings. */
+    /** @var string $token Access token, generated in Git provider account settings. */
     private $token;
 
     /** @var string $project Project name. */
@@ -67,8 +67,6 @@ final class gitlab_api extends gitprovider_api {
         $this->set_project();
         $this->set_masterbranch();
         $this->set_error(false);
-
-        parent::__construct();
     }
 
     /**
@@ -78,7 +76,7 @@ final class gitlab_api extends gitprovider_api {
      * @throws dml_exception
      */
     private function set_url(): void {
-        $this->url = get_config('local_bulk_roles_importer', 'gitlaburl');
+        $this->url = get_config('local_bulk_roles_importer', 'githuburl');
     }
 
     /**
@@ -96,7 +94,7 @@ final class gitlab_api extends gitprovider_api {
      * @return void
      */
     private function set_token(): void {
-        $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
+        $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
     }
 
     /**
@@ -115,7 +113,7 @@ final class gitlab_api extends gitprovider_api {
      * @throws dml_exception
      */
     private function set_project(): void {
-        $project = get_config('local_bulk_roles_importer', 'gitlabproject');
+        $project = get_config('local_bulk_roles_importer', 'githubproject');
         $this->project = urlencode($project);
     }
 
@@ -134,8 +132,8 @@ final class gitlab_api extends gitprovider_api {
      * @return void
      * @throws dml_exception
      */
-    private function set_masterbranch():void {
-        $this->masterbranch = get_config('local_bulk_roles_importer', 'gitlabmaster');
+    private function set_masterbranch(): void {
+        $this->masterbranch = get_config('local_bulk_roles_importer', 'githubmaster');
     }
 
     /**
@@ -212,13 +210,17 @@ final class gitlab_api extends gitprovider_api {
      */
     private function get_data($url): bool|string {
 
+        $url = urldecode($url);
         $headers = [
-            'PRIVATE-TOKEN: ' . $this->get_token(),
+            'Authorization: Bearer ' . $this->get_token(),
+            'Accept: application/vnd.github+json',
+            'X-GitHub-Api-Version: 2022-11-28',
         ];
         // Set request options.
         $handler = curl_init();
         curl_setopt($handler, CURLOPT_URL, $url);
         curl_setopt($handler, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($handler, CURLOPT_USERAGENT, 'moodle-local_bulk_roles_importer');
         curl_setopt($handler, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($handler, CURLOPT_POST, false);
         curl_setopt($handler, CURLOPT_HTTPHEADER, array_values($headers));
@@ -247,13 +249,13 @@ final class gitlab_api extends gitprovider_api {
     /**
      * Get array of branches or false.
      *
-     * @return false|mixed
+     * @return false|array
      */
-    private function get_branches(): array|false {
+    private function get_branches(): false|array {
         $url = $this->get_url();
-        $url .= '/api/v4/projects/';
+        $url .= '/repos/';
         $url .= $this->get_project();
-        $url .= '/repository/branches';
+        $url .= '/branches';
 
         $branches = $this->get_data($url);
 
@@ -264,13 +266,7 @@ final class gitlab_api extends gitprovider_api {
         return json_decode($branches);
     }
 
-    /**
-     * Get selected branch info or false.
-     *
-     * @param string $name Branch name.
-     * @return false|mixed
-     */
-    public function get_branch($name): array|false {
+    public function get_branch($name): false|array {
         $branches = $this->get_branches();
         if (!$branches) {
             return false;
@@ -285,34 +281,26 @@ final class gitlab_api extends gitprovider_api {
         return false;
     }
 
-    /**
-     * Get timestamp of master branch last updated time or false.
-     *
-     * @return false|int
-     */
     public function get_master_branch_last_updated(): false|int {
-        $masterbranch = $this->get_masterbranch();
-        $branch = $this->get_branch($masterbranch);
-        if (!$branch) {
+        $url = $this->get_url();
+        $url .= '/repos/';
+        $url .= $this->get_project();
+        $url .= '/commits/';
+        $url .= $this->get_masterbranch();
+
+        $commit = $this->get_data($url);
+        $commit = json_decode($commit);
+
+        $timestamp = $commit->commit->author->date ?? false;
+
+        if (!$timestamp) {
             return false;
         }
 
-        $timestammp = $branch->commit->created_at ?? false;
-
-        if (!$timestammp) {
-            return false;
-        }
-
-        return strtotime($timestammp);
+        return strtotime($timestamp);
     }
 
-    /**
-     * Get files list for selected branch, by default from master branch.
-     *
-     * @param $branch
-     * @return false|mixed
-     */
-    public function get_files($branch = false): array|false {
+    public function get_files($branch = false): false|array {
 
         if (!$branch) {
             $branch = $this->get_masterbranch();
@@ -323,10 +311,9 @@ final class gitlab_api extends gitprovider_api {
         }
 
         $url = $this->get_url();
-        $url .= '/api/v4/projects/';
+        $url .= '/repos/';
         $url .= $this->get_project();
-        $url .= '/repository/tree?ref=' . $branch;
-        $url .= '&per_page=100';
+        $url .= '/git/trees/' . $branch;
 
         $files = $this->get_data($url);
 
@@ -339,21 +326,18 @@ final class gitlab_api extends gitprovider_api {
         return $files;
     }
 
-    /**
-     * Get file content for selected filepath and branch.
-     * @param string $branch Branch name.
-     * @param string $filepath File path.
-     *
-     * @return bool|string
-     */
     public function get_file_content($branch, $filepath): false|string {
         $url = $this->get_url();
-        $url .= '/api/v4/projects/';
+        $url .= '/repos/';
         $url .= $this->get_project();
-        $url .= '/repository/files/' . $filepath;
-        $url .= '/raw?ref=' . $branch;
+        $url .= '/contents/' . $filepath;
+        $url .= '?ref=' . $branch;
 
-        return $this->get_data($url);
+        $data = $this->get_data($url);
+        $json = json_decode($data);
+        $content_base46 = $json->content;
+
+        return base64_decode($content_base46);
     }
 
     /**
@@ -365,18 +349,17 @@ final class gitlab_api extends gitprovider_api {
     private function get_file_last_commit($filepath): false|int {
 
         $url = $this->get_url();
-        $url .= '/api/v4/projects/';
+        $url .= '/repos/';
         $url .= $this->get_project();
-        $url .= '/repository/files/' . $filepath;
-        $url .= '/blame?ref=';
-        $url .= $this->get_masterbranch();
+        $url .= '/commits?path=' . $filepath;
+        $url .= '&ref=' . $this->get_masterbranch();
 
         $data = $this->get_data($url);
 
         $json = json_decode($data);
 
         $lastpart = end($json);
-        $date = $lastpart->commit->committed_date ?? false;
+        $date = $lastpart->commit->author->date ?? false;
 
         if (!$date) {
             return 0;
@@ -385,11 +368,6 @@ final class gitlab_api extends gitprovider_api {
         return strtotime($date);
     }
 
-    /**
-     * Get array of roles.
-     *
-     * @return array
-     */
     public function get_roles(): array {
         $roles = [];
         $files = $this->get_files();
@@ -398,7 +376,7 @@ final class gitlab_api extends gitprovider_api {
             return $roles;
         }
 
-        foreach ($files as $file) {
+        foreach ($files->tree as $file) {
             $fileinfo = pathinfo($file->path);
             $filetype = $fileinfo['extension'] ?? '';
 

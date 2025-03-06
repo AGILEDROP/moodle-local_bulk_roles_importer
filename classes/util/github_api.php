@@ -35,7 +35,7 @@ use stdClass;
 /**
  * Definition class for GitHub API.
  */
-class github_api {
+final class github_api extends gitprovider_api {
 
     /** @var string $url Url link to root of repositories. */
     private $url;
