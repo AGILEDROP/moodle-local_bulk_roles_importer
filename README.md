@@ -1,8 +1,22 @@
 # Bulk Roles Importer #
 
-TODO Describe the plugin shortly here.
+The Bulk Roles Importer plugin allows you to import multiple roles into Moodle
+from XML files, either manually or automatically, using a file upload or a
+connected repository.
 
-TODO Provide more detailed description here.
+### Manual Import
+
+Navigate to Site administration > Plugins > Import roles from a file to manually
+upload an XML file or a ZIP archive containing multiple XML files with Moodle
+role definitions. After uploading, click Import, and the plugin will process the
+files and display the results.
+
+### Automatic Import
+
+In Site administration > Plugins > Bulk Roles Importer settings, you can
+configure a repository as the source for role XML files and set a schedule for
+automatic imports. The plugin will periodically fetch the latest role
+definitions and apply them automatically.
 
 ## Installing via uploaded ZIP file ##
 
