@@ -57,7 +57,7 @@ if ($mform->is_cancelled()) {
     echo '<h3 class="h3">' . get_string('import:runsuccesslogheader', 'local_bulk_roles_importer') . '</h3><div class="log">';
 
     $rolesimporter = new roles_importer();
-    $rolesimporter->import_roles('zipball');
+    $rolesimporter->import_roles('file');
 
     echo '</div>';
     echo $OUTPUT->single_button(new moodle_url('/local/bulk_roles_importer/import_from_file.php'),

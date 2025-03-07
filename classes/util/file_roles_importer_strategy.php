@@ -17,9 +17,9 @@
 namespace local_bulk_roles_importer\util;
 
 /**
- * Strategy to import roles from GitHub repository.
+ * Strategy to import roles from a file.
  *
- * File         github_roles_importer_strategy.php
+ * File         file_roles_importer_strategy.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
@@ -34,13 +34,13 @@ use stdClass;
 use ZipArchive;
 
 /**
- * Roles importing strategy for Zipball file.
+ * Roles importing strategy for a file.
  */
-class zipball_roles_importer_strategy implements roles_importer_strategy_interface {
+class file_roles_importer_strategy implements roles_importer_strategy_interface {
 
     public function get_name(): string
     {
-        return 'zipball';
+        return 'file';
     }
 
     public function get_last_updated(): int {
@@ -51,31 +51,18 @@ class zipball_roles_importer_strategy implements roles_importer_strategy_interfa
         $roles = [];
         $importfiledir = make_upload_directory('local_bulk_roles_importer');
         $importfilepath = $importfiledir  . DIRECTORY_SEPARATOR . "import_roles_file";
-        $extractedfolder = false;
         $filepaths = [];
 
         // Prepare files
         $zip = new ZipArchive;
         if ($zip->open($importfilepath) === TRUE) {
             $extractedfolder = $importfiledir  . DIRECTORY_SEPARATOR . "extracted_files";
+            $this->delete_directory_recursively($extractedfolder);
             mkdir($extractedfolder, 0777, true);
             $zip->extractTo($extractedfolder);
             $zip->close();
 
-            $files = array_diff(scandir($extractedfolder), array('..', '.'));
-            if (count($files) === 1) {
-                $singleitem = reset($files);
-                $singleitempath = $extractedfolder . DIRECTORY_SEPARATOR . $singleitem;
-                if (is_dir($singleitempath)) {
-                    $extractedfolder = $singleitempath;
-                }
-            }
-
-            foreach (scandir($extractedfolder) as $file) {
-                if (pathinfo($file, PATHINFO_EXTENSION) === 'xml') {
-                    $filepaths[] = $extractedfolder . DIRECTORY_SEPARATOR . $file;
-                }
-            }
+            $filepaths = $this->extract_xml_paths_from_directory_recursively($extractedfolder);
         } elseif (simplexml_load_file($importfilepath)) {
             $filepaths[] = $importfilepath;
         } else {
@@ -101,12 +88,42 @@ class zipball_roles_importer_strategy implements roles_importer_strategy_interfa
         }
 
         // Cleanup - Delete file and extracted files
-        unlink($importfilepath);
-        if ($extractedfolder) {
-            $this->delete_directory_recursively($extractedfolder);
-        }
+        $this->delete_directory_recursively($importfiledir);
 
         return $roles;
+    }
+
+    /**
+     * Remove directory and all its contents recursively.
+     *
+     * @return array|false
+     */
+    private function extract_xml_paths_from_directory_recursively(string $dirpath): array|false {
+        if (!is_dir($dirpath)) {
+            return false;
+        }
+
+        $filepaths = [];
+
+        foreach (scandir($dirpath) as $object) {
+            if ($object != "." && $object != "..") {
+                $objectpath = $dirpath . DIRECTORY_SEPARATOR . $object;
+                if (
+                    is_dir($objectpath)
+                    && !is_link($objectpath)
+                ) {
+                    $filepaths = array_merge(
+                        $filepaths,
+                        $this->extract_xml_paths_from_directory_recursively($objectpath),
+                    );
+                }
+                else if (pathinfo($object, PATHINFO_EXTENSION) === 'xml') {
+                    $filepaths[] = $objectpath;
+                }
+            }
+        }
+
+        return $filepaths;
     }
 
     /**
@@ -114,17 +131,17 @@ class zipball_roles_importer_strategy implements roles_importer_strategy_interfa
      */
     private function delete_directory_recursively(string $dirpath): void {
         if (is_dir($dirpath)) {
-            $objects = scandir($dirpath);
-            foreach ($objects as $object) {
+            foreach (scandir($dirpath) as $object) {
                 if ($object != "." && $object != "..") {
+                    $objectpath = $dirpath . DIRECTORY_SEPARATOR . $object;
                     if (
-                        is_dir($dirpath. DIRECTORY_SEPARATOR .$object)
-                        && !is_link($dirpath. DIRECTORY_SEPARATOR .$object)
+                        is_dir($objectpath)
+                        && !is_link($objectpath)
                     ) {
-                        $this->delete_directory_recursively($dirpath. DIRECTORY_SEPARATOR .$object);
+                        $this->delete_directory_recursively($objectpath);
                     }
                     else {
-                        unlink($dirpath. DIRECTORY_SEPARATOR .$object);
+                        unlink($objectpath);
                     }
                 }
             }

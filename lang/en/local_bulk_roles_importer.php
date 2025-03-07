@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 
 
 $string['form:description'] = 'Description';
-$string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP containing XML files in the root directory, or a ZIP file containing one folder that contains the XML files.';
+$string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
 $string['form:import'] = 'Import';
 $string['header:bitbucket'] = 'Bitbucket';
 $string['header:bitbucketinfo'] = 'Enter Bitbucket info data to import roles from repository.';
