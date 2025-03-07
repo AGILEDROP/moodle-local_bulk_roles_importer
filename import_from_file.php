@@ -56,7 +56,7 @@ if ($mform->is_cancelled()) {
 
     echo '<h3 class="h3">' . get_string('import:runsuccesslogheader', 'local_bulk_roles_importer') . '</h3><div class="log">';
 
-    $rolesimporter = new roles_importer();
+    $rolesimporter = new roles_importer('web');
     $rolesimporter->import_roles('file');
 
     echo '</div>';

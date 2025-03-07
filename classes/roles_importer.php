@@ -56,29 +56,66 @@ class roles_importer {
     /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strateties. */
     private array $rolesimportstrategies;
 
+    /** @var string[] $LOGGING_STYLES Array of valid logging styles. */
+    public const LOGGING_STYLES = [
+        'task',
+        'web',
+    ];
+
+    /** @var string $loggingstyle Selected logging style. */
+    private string $loggingstyle;
+
     /**
      * Constructor.
      */
-    public function __construct() {
+    public function __construct($loggingstyle = 'task') {
         $this->rolemanager = new role_manager();
         $this->rolesimportstrategies = roles_importer_strategies_manager::get_strategies_classes();
+        if (in_array($loggingstyle, self::LOGGING_STYLES, true)) {
+            $this->loggingstyle = $loggingstyle;
+        }
+        else {
+            $this->loggingstyle = 'task';
+        }
+    }
+
+    /**
+     * Write out logs in prefered style.
+     *
+     * @param string $message The message to log.
+     * @return void
+     */
+    private function log_message(string $message): void {
+        switch ($this->loggingstyle) {
+            case 'task':
+                mtrace($message);
+                break;
+            case 'web':
+                echo '<p class="message">' . $message . '</p>';
+                break;
+        }
     }
 
     /**
      * Execute scheduled task.
+     *
+     * @param string|null $strategy Name of the strategy to use for importing
+     * roles. Default is NULL which uses the currently selected automatic
+     * strategy which you can select in the settings.
+     * @return void
      */
-    public function import_roles($strategy = null) {
+    public function import_roles(string|null $strategy = null): void {
         if ($strategy === null) {
             $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         }
         if (!class_exists($this->rolesimportstrategies[$strategy])) {
-            mtrace('ERROR - source: ' . $strategy . ' does not exist');
+            $this->log_message('ERROR - source: ' . $strategy . ' does not exist');
             return;
         }
 
-        mtrace('=======================================================================================================');
-        mtrace('  IMPORT ROLES FROM SOURCE: ' . $strategy);
-        mtrace('=======================================================================================================');
+        $this->log_message('=======================================================================================================');
+        $this->log_message('  IMPORT ROLES FROM SOURCE: ' . $strategy);
+        $this->log_message('=======================================================================================================');
 
         $this->lastimport = $this->rolemanager->get_lastimport();
 
@@ -86,14 +123,14 @@ class roles_importer {
         $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
         if (!$this->lastchanges) {
-            mtrace('ERROR - cannot obtain master branch last updated time');
+            $this->log_message('ERROR - cannot obtain master branch last updated time');
             return;
         }
 
         $roles = $this->rolesimportstrategy->get_roles();
 
         if (empty($roles)) {
-            mtrace('ERROR - cannot obtain roles');
+            $this->log_message('ERROR - cannot obtain roles');
             return;
         }
 
@@ -115,8 +152,8 @@ class roles_importer {
         foreach ($roles as $role) {
             if (!core_role_preset::is_valid_preset($role->xml)) {
                 $role->needupdate = false;
-                mtrace('invalid XML');
-                mtrace($separator);
+                $this->log_message('invalid XML');
+                $this->log_message($separator);
                 unset($role);
                 continue;
             }
@@ -137,8 +174,8 @@ class roles_importer {
             $role->needupdate = true;
             $this->rolemanager->create_role_from_xml($role->xml);
             $message = '   -' . $role->shortname . ' [created]';
-            mtrace($message);
-            mtrace($separator);
+            $this->log_message($message);
+            $this->log_message($separator);
         }
 
         // Loop 2 - update roles.
@@ -162,8 +199,8 @@ class roles_importer {
                 }
             }
 
-            mtrace($message);
-            mtrace('=======================================================================================================');
+            $this->log_message($message);
+            $this->log_message('=======================================================================================================');
         }
         $this->rolemanager->update_lastimport(true);
     }
