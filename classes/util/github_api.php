@@ -166,13 +166,23 @@ final class github_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_file_last_commit_url($filepath): string {
+    final function get_file_last_commit($filepath): false|int {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();
         $url .= '/commits?path=' . $filepath;
         $url .= '&ref=' . $this->get_masterbranch();
 
-        return $url;
+        $data = $this->get_data($url);
+        $json = json_decode($data);
+
+        $lastpart = end($json);
+        $date = $lastpart->commit->author->date ?? false;
+
+        if (!$date) {
+            return 0;
+        }
+
+        return strtotime($date);
     }
 }

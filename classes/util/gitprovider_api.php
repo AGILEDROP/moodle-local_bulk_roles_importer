@@ -326,35 +326,14 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     }
 
     /**
-     * Return last commited version of file url.
-     *
-     * @param $filepath
-     * @return false|int
-     */
-    protected function get_file_last_commit_url($filepath): string {
-        // This has to be implemented in child class.
-        return '';
-    }
-
-    /**
      * Get timestamp for last commit or 0.
      *
      * @param $filepath
      * @return false|int
      */
     protected function get_file_last_commit($filepath): false|int {
-        $url = $this->get_file_last_commit_url($filepath);
-        $data = $this->get_data($url);
-        $json = json_decode($data);
-
-        $lastpart = end($json);
-        $date = $lastpart->commit->author->date ?? false;
-
-        if (!$date) {
-            return 0;
-        }
-
-        return strtotime($date);
+        // This has to be implemented in child class.
+        return strtotime('0');
     }
 
     /**

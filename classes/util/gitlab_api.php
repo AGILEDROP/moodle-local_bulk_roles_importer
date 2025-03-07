@@ -155,7 +155,7 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_file_last_commit_url($filepath): string {
+    final function get_file_last_commit($filepath): false|int {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
@@ -163,6 +163,16 @@ final class gitlab_api extends gitprovider_api {
         $url .= '/blame?ref=';
         $url .= $this->get_masterbranch();
 
-        return $url;
+        $data = $this->get_data($url);
+        $json = json_decode($data);
+
+        $lastpart = end($json);
+        $date = $lastpart->commit->committed_date ?? false;
+
+        if (!$date) {
+            return 0;
+        }
+
+        return strtotime($date);
     }
 }
