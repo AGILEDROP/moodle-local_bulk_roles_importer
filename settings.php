@@ -47,6 +47,5 @@ if ($hassiteconfig) {
         require_once(__DIR__ . "/settings/settings_main.php");
         require_once(__DIR__ . "/settings/settings_github.php");
         require_once(__DIR__ . "/settings/settings_gitlab.php");
-        require_once(__DIR__ . "/settings/settings_bitbucket.php");
     }
 }
