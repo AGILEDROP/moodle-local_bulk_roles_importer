@@ -55,7 +55,7 @@ $settings_main->hide_if('local_bulk_roles_importer/gitlaburl',
     'gitlab');
 
 // GitLab - Auth token.
-$setting = new admin_setting_configtext(
+$setting = new admin_setting_configpasswordunmask(
     'local_bulk_roles_importer/gitlabtoken',
     new lang_string('label:gitlabtoken', 'local_bulk_roles_importer'),
     new lang_string('label:gitlabtoken_help', 'local_bulk_roles_importer'),

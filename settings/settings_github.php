@@ -55,7 +55,7 @@ $settings_main->hide_if('local_bulk_roles_importer/githuburl',
     'github');
 
 // GitHub - Auth token.
-$setting = new admin_setting_configtext(
+$setting = new admin_setting_configpasswordunmask(
     'local_bulk_roles_importer/githubtoken',
     new lang_string('label:githubtoken', 'local_bulk_roles_importer'),
     new lang_string('label:githubtoken_help', 'local_bulk_roles_importer'),
