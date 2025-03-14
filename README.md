@@ -6,17 +6,17 @@ connected repository.
 
 ### Manual Import
 
-Navigate to Site administration > Plugins > Import roles from a file to manually
-upload an XML file or a ZIP archive containing multiple XML files with Moodle
-role definitions. After uploading, click Import, and the plugin will process the
-files and display the results.
+Navigate to _Site administration > Users > Permissions > Import roles from a 
+file_ to manually upload an XML file or a ZIP archive containing multiple XML
+files with Moodle role definitions. After uploading, click Import, and the
+plugin will process the files and display the results.
 
 ### Automatic Import
 
-In Site administration > Plugins > Bulk Roles Importer settings, you can
-configure a repository as the source for role XML files and set a schedule for
-automatic imports. The plugin will periodically fetch the latest role
-definitions and apply them automatically.
+In _Site administration > Users > Permissions > Bulk Roles Importer settings_,
+you can configure a repository as the source for role XML files and set a
+schedule for automatic imports. The plugin will periodically fetch the latest
+role definitions and apply them automatically.
 
 ## Installing via uploaded ZIP file ##
 
@@ -32,8 +32,8 @@ The plugin can be also installed by putting the contents of this directory to
 
     {your/moodle/dirroot}/local/bulk_roles_importer
 
-Afterwards, log in to your Moodle site as an admin and go to _Site administration >
-Notifications_ to complete the installation.
+Afterwards, log in to your Moodle site as an admin and go to _Site
+administration > Notifications_ to complete the installation.
 
 Alternatively, you can run
 
