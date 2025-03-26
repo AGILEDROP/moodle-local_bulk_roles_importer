@@ -47,8 +47,8 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     /** @var string $project Project name. */
     protected $project;
 
-    /** @var string $masterbranch Master/main branch name. */
-    protected $masterbranch;
+    /** @var string $mainbranch Main/main branch name. */
+    protected $mainbranch;
 
     /** @var bool $error Has error. */
     private $error;
@@ -66,7 +66,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         $this->set_url();
         $this->set_token();
         $this->set_project();
-        $this->set_masterbranch();
+        $this->set_mainbranch();
         $this->set_error(false);
     }
 
@@ -130,23 +130,23 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     }
 
     /**
-     * Set master/main branch name.
+     * Set main/main branch name.
      *
      * @return void
      * @throws dml_exception
      */
-    protected function set_masterbranch(): void {
+    protected function set_mainbranch(): void {
         // This has to be implemented in child class.
-        $this->masterbranch = '';
+        $this->mainbranch = '';
     }
 
     /**
-     * Get master/main branch name.
+     * Get main/main branch name.
      *
      * @return string
      */
-    protected function get_masterbranch(): string {
-        return $this->masterbranch;
+    protected function get_mainbranch(): string {
+        return $this->mainbranch;
     }
 
     /**
@@ -287,11 +287,11 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     }
 
     /**
-     * Return last commit timestamp from master branch.
+     * Return last commit timestamp from main branch.
      *
      * @return string|false
      */
-    protected function get_master_branch_last_updated_timestamp(): false|string {
+    protected function get_main_branch_last_updated_timestamp(): false|string {
         // This has to be implemented in child class.
         return 0;
     }
@@ -299,8 +299,8 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     /**
      * {@inheritdoc}
      */
-    public function get_master_branch_last_updated(): false|int {
-        $timestamp = $this->get_master_branch_last_updated_timestamp();
+    public function get_main_branch_last_updated(): false|int {
+        $timestamp = $this->get_main_branch_last_updated_timestamp();
 
         if (!$timestamp) {
             return false;
@@ -356,7 +356,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
             }
 
             $lastcommit = $this->get_file_last_commit($file->path);
-            $xml = $this->get_file_content($this->get_masterbranch(), $file->path);
+            $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
             $xmlstring = simplexml_load_string($xml);
 
             $json = json_encode($xmlstring);

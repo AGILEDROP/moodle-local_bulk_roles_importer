@@ -50,7 +50,7 @@ class github_roles_importer_strategy implements roles_importer_strategy_interfac
     }
 
     public function get_last_updated(): int {
-        return $this->github->get_master_branch_last_updated();
+        return $this->github->get_main_branch_last_updated();
     }
 
     public function get_roles(): array {

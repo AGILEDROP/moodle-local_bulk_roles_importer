@@ -61,8 +61,8 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function set_masterbranch():void {
-        $this->masterbranch = get_config('local_bulk_roles_importer', 'gitlabmaster');
+    final function set_mainbranch():void {
+        $this->mainbranch = get_config('local_bulk_roles_importer', 'gitlabmain');
     }
 
     /**
@@ -99,9 +99,9 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_master_branch_last_updated_timestamp(): false|string {
-        $masterbranch = $this->get_masterbranch();
-        $branch = $this->get_branch($masterbranch);
+    final function get_main_branch_last_updated_timestamp(): false|string {
+        $mainbranch = $this->get_mainbranch();
+        $branch = $this->get_branch($mainbranch);
         if (!$branch) {
             return false;
         }
@@ -115,7 +115,7 @@ final class gitlab_api extends gitprovider_api {
     public function get_files($branch = false): false|array {
 
         if (!$branch) {
-            $branch = $this->get_masterbranch();
+            $branch = $this->get_mainbranch();
         }
 
         if (!$branch) {
@@ -161,7 +161,7 @@ final class gitlab_api extends gitprovider_api {
         $url .= $this->get_project();
         $url .= '/repository/files/' . $filepath;
         $url .= '/blame?ref=';
-        $url .= $this->get_masterbranch();
+        $url .= $this->get_mainbranch();
 
         $data = $this->get_data($url);
         $json = json_decode($data);

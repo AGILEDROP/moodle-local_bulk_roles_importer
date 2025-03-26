@@ -50,7 +50,7 @@ class gitlab_roles_importer_strategy implements roles_importer_strategy_interfac
     }
 
     public function get_last_updated(): int {
-        return $this->gitlab->get_master_branch_last_updated();
+        return $this->gitlab->get_main_branch_last_updated();
     }
 
     public function get_roles(): array {
