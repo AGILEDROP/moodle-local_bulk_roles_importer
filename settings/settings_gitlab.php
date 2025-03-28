@@ -35,8 +35,8 @@ $setting = new admin_setting_heading(
         new lang_string('header:gitlab', 'local_bulk_roles_importer'),
         new lang_string('header:gitlabinfo', 'local_bulk_roles_importer'),
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/gitlab_roles',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/gitlab_roles',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'gitlab');
@@ -48,8 +48,8 @@ $setting = new admin_setting_configtext(
         new lang_string('label:gitlaburl_help', 'local_bulk_roles_importer'),
         'https://gitlab.com'
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/gitlaburl',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/gitlaburl',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'gitlab');
@@ -61,8 +61,8 @@ $setting = new admin_setting_configpasswordunmask(
     new lang_string('label:gitlabtoken_help', 'local_bulk_roles_importer'),
     ''
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/gitlabtoken',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/gitlabtoken',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'gitlab');
@@ -74,8 +74,8 @@ $setting = new admin_setting_configtext(
         new lang_string('label:gitlabproject_help', 'local_bulk_roles_importer'),
         'moodle/template-01/roles'
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/gitlabproject',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/gitlabproject',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'gitlab');
@@ -87,8 +87,8 @@ $setting = new admin_setting_configtext(
     new lang_string('label:gitlabmaster_help', 'local_bulk_roles_importer'),
     'main'
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/gitlabmaster',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/gitlabmaster',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'gitlab');

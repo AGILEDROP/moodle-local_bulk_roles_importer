@@ -27,11 +27,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $settings_main = new admin_settingpage(
+    $settingsmain = new admin_settingpage(
         'local_bulk_roles_importer_settings_main',
         new lang_string('settings:pagetitlemain', 'local_bulk_roles_importer')
     );
-    $ADMIN->add('roles', $settings_main);
+    $ADMIN->add('roles', $settingsmain);
 
     $ADMIN->add(
         'roles',
@@ -43,7 +43,7 @@ if ($hassiteconfig) {
     );
 
     if ($ADMIN->fulltree) {
-        // Main settings page
+        // Main settings page.
         require_once(__DIR__ . "/settings/settings_main.php");
         require_once(__DIR__ . "/settings/settings_github.php");
         require_once(__DIR__ . "/settings/settings_gitlab.php");

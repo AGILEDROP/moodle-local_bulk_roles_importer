@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Utility class - role manager.
  *
@@ -28,6 +26,8 @@ namespace local_bulk_roles_importer\util;
  * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace local_bulk_roles_importer\util;
 
 use coding_exception;
 use context_system;

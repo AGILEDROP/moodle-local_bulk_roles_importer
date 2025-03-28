@@ -34,8 +34,8 @@ namespace local_bulk_roles_importer\util;
  */
 class roles_importer_strategies_manager {
 
-    /** @var array $roles_importer_strategies Array of all roles importer strategies. */
-    private static array $roles_importer_strategies = [
+    /** @var array $rolesimporterstrategies Array of all roles importer strategies. */
+    private static array $rolesimporterstrategies = [
         'github' => [
             'name' => 'Github',
             'class' => github_roles_importer_strategy::class,
@@ -58,12 +58,11 @@ class roles_importer_strategies_manager {
      *
      * @return array
      */
-    public static function get_strategies_names(): array
-    {
+    public static function get_strategies_names(): array {
         $mapfunction = function($value) {
             return $value['name'];
         };
-        return array_map($mapfunction, self::$roles_importer_strategies);
+        return array_map($mapfunction, self::$rolesimporterstrategies);
     }
 
     /**
@@ -71,15 +70,14 @@ class roles_importer_strategies_manager {
      *
      * @return array
      */
-    public static function get_automatic_strategies_names(): array
-    {
+    public static function get_automatic_strategies_names(): array {
         $filterfunction = function($value) {
             return $value['automatic'];
         };
         $mapfunction = function($value) {
             return $value['name'];
         };
-        $filteredarray = array_filter(self::$roles_importer_strategies, $filterfunction);
+        $filteredarray = array_filter(self::$rolesimporterstrategies, $filterfunction);
         return array_map($mapfunction, $filteredarray);
     }
 
@@ -88,12 +86,11 @@ class roles_importer_strategies_manager {
      *
      * @return array
      */
-    public static function get_strategies_classes(): array
-    {
+    public static function get_strategies_classes(): array {
         $mapfunction = function($value) {
             return $value['class'];
         };
-        return array_map($mapfunction, self::$roles_importer_strategies);
+        return array_map($mapfunction, self::$rolesimporterstrategies);
     }
 
     /**
@@ -101,9 +98,8 @@ class roles_importer_strategies_manager {
      *
      * @return bool
      */
-    public static function is_strategy_automatic($strategy): bool
-    {
-        $isautomatic = self::$roles_importer_strategies[$strategy]['automatic'] ?? false;
+    public static function is_strategy_automatic($strategy): bool {
+        $isautomatic = self::$rolesimporterstrategies[$strategy]['automatic'] ?? false;
         return $isautomatic;
     }
 

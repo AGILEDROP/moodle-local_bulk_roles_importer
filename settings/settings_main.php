@@ -38,14 +38,14 @@ $setting = new admin_setting_configselect('local_bulk_roles_importer/roleretriev
     new lang_string('label:rolesretrievalsourcedescription', 'local_bulk_roles_importer'),
     "github",
     $rolesretrievaloptions);
-$settings_main->add($setting);
+$settingsmain->add($setting);
 
 // Scheduled task external settings link.
 $taskurl = new moodle_url('/admin/tool/task/scheduledtasks.php', [
     'action' => 'edit',
-    'task' => 'local_bulk_roles_importer\task\import_roles'
+    'task' => 'local_bulk_roles_importer\task\import_roles',
 ]);
-$settings_main->add(new admin_setting_configempty(
+$settingsmain->add(new admin_setting_configempty(
     'local_bulk_roles_importer/tasklink',
     new lang_string('label:scheduledtasksettings', 'local_bulk_roles_importer'),
     html_writer::link($taskurl, new lang_string('label:scheduledtasksettingsdescription', 'local_bulk_roles_importer'))

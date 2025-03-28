@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Strategy to import roles from a file.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\util;
+
 use moodle_exception;
 use stdClass;
 use ZipArchive;
@@ -38,24 +38,32 @@ use ZipArchive;
  */
 class file_roles_importer_strategy implements roles_importer_strategy_interface {
 
-    public function get_name(): string
-    {
+    /**
+     * {inheritdoc}
+     */
+    public function get_name(): string {
         return 'file';
     }
 
+    /**
+     * {inheritdoc}
+     */
     public function get_last_updated(): int {
         return time();
     }
 
+    /**
+     * {inheritdoc}
+     */
     public function get_roles(): array {
         $roles = [];
         $importfiledir = make_upload_directory('local_bulk_roles_importer');
         $importfilepath = $importfiledir  . DIRECTORY_SEPARATOR . "import_roles_file";
         $filepaths = [];
 
-        // Prepare files
+        // Prepare files.
         $zip = new ZipArchive;
-        if ($zip->open($importfilepath) === TRUE) {
+        if ($zip->open($importfilepath) === true) {
             $extractedfolder = $importfiledir  . DIRECTORY_SEPARATOR . "extracted_files";
             $this->delete_directory_recursively($extractedfolder);
             mkdir($extractedfolder, 0777, true);
@@ -63,14 +71,14 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
             $zip->close();
 
             $filepaths = $this->extract_xml_paths_from_directory_recursively($extractedfolder);
-        } elseif (simplexml_load_file($importfilepath)) {
+        } else if (simplexml_load_file($importfilepath)) {
             $filepaths[] = $importfilepath;
         } else {
             unlink($importfilepath);
             throw new moodle_exception('Invalid file format. Must be an XML or a ZIP containing XML files.');
         }
 
-        // Process XML files
+        // Process XML files.
         foreach ($filepaths as $filepath) {
             $xmlobject = simplexml_load_file($filepath);
             if ($xmlobject) {
@@ -87,7 +95,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
             }
         }
 
-        // Cleanup - Delete file and extracted files
+        // Cleanup - Delete file and extracted files.
         $this->delete_directory_recursively($importfiledir);
 
         return $roles;
@@ -96,6 +104,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
     /**
      * Remove directory and all its contents recursively.
      *
+     * @param string $dirpath
      * @return array|false
      */
     private function extract_xml_paths_from_directory_recursively(string $dirpath): array|false {
@@ -116,8 +125,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
                         $filepaths,
                         $this->extract_xml_paths_from_directory_recursively($objectpath),
                     );
-                }
-                else if (pathinfo($object, PATHINFO_EXTENSION) === 'xml') {
+                } else if (pathinfo($object, PATHINFO_EXTENSION) === 'xml') {
                     $filepaths[] = $objectpath;
                 }
             }
@@ -139,8 +147,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
                         && !is_link($objectpath)
                     ) {
                         $this->delete_directory_recursively($objectpath);
-                    }
-                    else {
+                    } else {
                         unlink($objectpath);
                     }
                 }

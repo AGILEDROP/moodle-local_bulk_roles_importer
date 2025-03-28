@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer;
-
 /**
  * Context for roles importing strategies.
  *
@@ -28,6 +26,8 @@ namespace local_bulk_roles_importer;
  * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace local_bulk_roles_importer;
 
 use coding_exception;
 use core_role_preset;
@@ -65,6 +65,9 @@ class roles_importer {
     /** @var string $loggingstyle Selected logging style. */
     private string $loggingstyle;
 
+    /** @var string $SEPARATOR Separator for logs. */
+    private const SEPARATOR = '===================================================================================================';
+
     /**
      * Constructor.
      */
@@ -73,8 +76,7 @@ class roles_importer {
         $this->rolesimportstrategies = roles_importer_strategies_manager::get_strategies_classes();
         if (in_array($loggingstyle, self::LOGGING_STYLES, true)) {
             $this->loggingstyle = $loggingstyle;
-        }
-        else {
+        } else {
             $this->loggingstyle = 'task';
         }
     }
@@ -113,9 +115,9 @@ class roles_importer {
             return;
         }
 
-        $this->log_message('=======================================================================================================');
+        $this->log_message(self::SEPARATOR);
         $this->log_message('  IMPORT ROLES FROM SOURCE: ' . $strategy);
-        $this->log_message('=======================================================================================================');
+        $this->log_message(self::SEPARATOR);
 
         $this->lastimport = $this->rolemanager->get_lastimport();
 
@@ -146,14 +148,13 @@ class roles_importer {
      * @throws dml_exception
      */
     private function process_import($roles) {
-        $separator = '=======================================================================================================';
 
         // Loop 1 - in first loop we create roles that do not exist yet.
         foreach ($roles as $role) {
             if (!core_role_preset::is_valid_preset($role->xml)) {
                 $role->needupdate = false;
                 $this->log_message('invalid XML');
-                $this->log_message($separator);
+                $this->log_message(self::SEPARATOR);
                 unset($role);
                 continue;
             }
@@ -175,7 +176,7 @@ class roles_importer {
             $this->rolemanager->create_role_from_xml($role->xml);
             $message = '   -' . $role->shortname . ' [created]';
             $this->log_message($message);
-            $this->log_message($separator);
+            $this->log_message(self::SEPARATOR);
         }
 
         // Loop 2 - update roles.
@@ -200,7 +201,7 @@ class roles_importer {
             }
 
             $this->log_message($message);
-            $this->log_message('=======================================================================================================');
+            $this->log_message(self::SEPARATOR);
         }
         $this->rolemanager->update_lastimport(true);
     }

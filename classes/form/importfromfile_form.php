@@ -16,6 +16,8 @@
 
 namespace local_bulk_roles_importer\form;
 
+defined('MOODLE_INTERNAL') || die();
+
 use moodleform;
 
 /**
@@ -30,8 +32,16 @@ use moodleform;
 
 require_once("$CFG->libdir/formslib.php");
 
+/**
+ * Class importfromfile_form
+ */
 class importfromfile_form extends moodleform {
-    // Add elements to form.
+
+    /**
+     * Add elements to form.
+     *
+     * @return void
+     */
     public function definition() {
         $mform = $this->_form;
 

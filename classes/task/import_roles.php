@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\task;
-
 /**
  * Task to import roles from selected source.
  *
@@ -28,6 +26,8 @@ namespace local_bulk_roles_importer\task;
  * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace local_bulk_roles_importer\task;
 
 use core\task\scheduled_task;
 use local_bulk_roles_importer\roles_importer;
@@ -54,7 +54,7 @@ class import_roles extends scheduled_task {
             return;
         }
 
-        $roles_importer = new roles_importer();
-        $roles_importer->import_roles();
+        $rolesimporter = new roles_importer();
+        $rolesimporter->import_roles();
     }
 }

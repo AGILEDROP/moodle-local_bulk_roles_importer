@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Utility class - GitHub API.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\util;
+
 use CurlHandle;
 use local_bulk_roles_importer\util\gitprovider_api;
 
@@ -40,21 +40,21 @@ final class github_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function set_url(): void {
+    public function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'githuburl');
     }
 
     /**
      * {@inheritdoc}
      */
-    final function set_token(): void {
+    public function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
     }
 
     /**
      * {@inheritdoc}
      */
-    final function set_project(): void {
+    public function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'githubproject');
         $this->project = urlencode($project);
     }
@@ -62,14 +62,14 @@ final class github_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function set_masterbranch(): void {
+    public function set_masterbranch(): void {
         $this->masterbranch = get_config('local_bulk_roles_importer', 'githubmaster');
     }
 
     /**
      * {@inheritdoc}
      */
-    final function get_curl($url): CurlHandle|false {
+    public function get_curl($url): CurlHandle|false {
         $url = urldecode($url);
         $headers = [
             'Authorization: Bearer ' . $this->get_token(),
@@ -92,7 +92,7 @@ final class github_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_branches_url(): string {
+    public function get_branches_url(): string {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();
@@ -104,7 +104,7 @@ final class github_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_master_branch_last_updated_timestamp(): false|string {
+    public function get_master_branch_last_updated_timestamp(): false|string {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();
@@ -158,15 +158,15 @@ final class github_api extends gitprovider_api {
 
         $data = $this->get_data($url);
         $json = json_decode($data);
-        $content_base46 = $json->content;
+        $contentbase46 = $json->content;
 
-        return base64_decode($content_base46);
+        return base64_decode($contentbase46);
     }
 
     /**
      * {@inheritdoc}
      */
-    final function get_file_last_commit($filepath): false|int {
+    public function get_file_last_commit($filepath): false|int {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();

@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Strategy to import roles from GitLab repository.
  *
@@ -28,6 +26,8 @@ namespace local_bulk_roles_importer\util;
  * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace local_bulk_roles_importer\util;
 
 /**
  * Roles importing strategy for GitLab.
@@ -44,15 +44,23 @@ class gitlab_roles_importer_strategy implements roles_importer_strategy_interfac
         $this->gitlab = new gitlab_api();
     }
 
-    public function get_name(): string
-    {
+    /**
+     * {inheritdoc}
+     */
+    public function get_name(): string {
         return 'gitlab';
     }
 
+    /**
+     * {inheritdoc}
+     */
     public function get_last_updated(): int {
         return $this->gitlab->get_master_branch_last_updated();
     }
 
+    /**
+     * {inheritdoc}
+     */
     public function get_roles(): array {
         return $this->gitlab->get_roles();
     }

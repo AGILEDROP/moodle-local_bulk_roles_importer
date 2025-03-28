@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Utility class - GitLab API.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\util;
+
 use CurlHandle;
 
 /**
@@ -39,21 +39,21 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function set_url(): void {
+    public function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'gitlaburl');
     }
 
     /**
      * {@inheritdoc}
      */
-    final function set_token(): void {
+    public function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
     }
 
     /**
      * {@inheritdoc}
      */
-    final function set_project(): void {
+    public function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'gitlabproject');
         $this->project = urlencode($project);
     }
@@ -61,14 +61,14 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function set_masterbranch():void {
+    public function set_masterbranch(): void {
         $this->masterbranch = get_config('local_bulk_roles_importer', 'gitlabmaster');
     }
 
     /**
      * {@inheritdoc}
      */
-    final function get_curl($url): CurlHandle|false {
+    public function get_curl($url): CurlHandle|false {
         $headers = [
             'PRIVATE-TOKEN: ' . $this->get_token(),
         ];
@@ -87,7 +87,7 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_branches_url(): string {
+    public function get_branches_url(): string {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
@@ -99,7 +99,7 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_master_branch_last_updated_timestamp(): false|string {
+    public function get_master_branch_last_updated_timestamp(): false|string {
         $masterbranch = $this->get_masterbranch();
         $branch = $this->get_branch($masterbranch);
         if (!$branch) {
@@ -155,7 +155,7 @@ final class gitlab_api extends gitprovider_api {
     /**
      * {@inheritdoc}
      */
-    final function get_file_last_commit($filepath): false|int {
+    public function get_file_last_commit($filepath): false|int {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
