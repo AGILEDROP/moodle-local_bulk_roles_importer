@@ -41,7 +41,7 @@ use dml_exception;
 class role_manager {
 
     /** @var int $lastimport Timestamp of last role importing. */
-    private $lastimport;
+    private int $lastimport;
 
     /**
      * Constructor method.
@@ -56,7 +56,7 @@ class role_manager {
      * @return void
      * @throws dml_exception
      */
-    public function set_lastimport() {
+    public function set_lastimport(): void {
         $lastimport = get_config('local_bulk_roles_importer', 'roleslastimport');
         if (!$lastimport) {
             $lastimport = -1;
@@ -70,7 +70,7 @@ class role_manager {
      *
      * @return int
      */
-    public function get_lastimport() {
+    public function get_lastimport(): int {
         return $this->lastimport;
     }
 
@@ -78,10 +78,9 @@ class role_manager {
      * Check if role with given shortname exist.
      *
      * @param string $name Role shortname.
-     *
      * @return false|mixed Return role data object if exist otherwise false.
      */
-    public function role_exist($name) {
+    public function role_exist($name): mixed {
         $roles = get_all_roles();
 
         foreach ($roles as $role) {
@@ -99,7 +98,7 @@ class role_manager {
      * @param bool $sucess
      * @return void
      */
-    public function update_lastimport($sucess = false) {
+    public function update_lastimport(bool $sucess = false): void {
         if ($sucess) {
             $lastimport = time();
         } else {
@@ -118,7 +117,7 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    public function create_role_from_xml($xml) {
+    public function create_role_from_xml($xml): void {
         $options = [
             'shortname' => 1,
             'name' => 1,
@@ -148,7 +147,7 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    public function update_role_from_xml($roleid, $xml) {
+    public function update_role_from_xml(int $roleid, string $xml): void {
 
         $preset = core_role_preset::parse_preset($xml);
 
@@ -186,10 +185,11 @@ class role_manager {
      * @param string $name Visible role name.
      * @param string $description Role description.
      * @param string $archetype Role archetype.
+     *
      * @return void
      * @throws dml_exception
      */
-    private function update_role_info($roleid, $name, $description, $archetype) {
+    private function update_role_info(int $roleid, string $name, string $description, string $archetype): void {
         global $DB;
 
         $conditions = [
@@ -211,7 +211,7 @@ class role_manager {
      * @return void
      * @throws dml_exception
      */
-    private function update_contextlevels($roleid, $contextlevels) {
+    private function update_contextlevels(int $roleid, array $contextlevels): void {
         global $DB;
 
         // Get current context levels.
@@ -254,7 +254,7 @@ class role_manager {
      * @return void
      * @throws dml_exception
      */
-    private function update_allows($allowtype, $roleid, $permissions) {
+    private function update_allows(string $allowtype, int $roleid, array $permissions): void {
         global $DB;
 
         // Remove value '-1' from permissions.
@@ -304,11 +304,12 @@ class role_manager {
      *
      * @param int $roleid Moodle role id.
      * @param array $permissions Array of permissions.
+     *
      * @return void
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function update_permissions($roleid, $permissions) {
+    private function update_permissions(int $roleid, array $permissions): void {
         global $DB;
 
         // Get all defined capabilities in Moodle.
@@ -361,7 +362,7 @@ class role_manager {
      * @param string $shortname Role shortname.
      * @return false|mixed
      */
-    public function get_role($shortname) {
+    public function get_role(string $shortname): mixed {
         $roles = get_all_roles();
 
         foreach ($roles as $role) {

@@ -210,9 +210,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * Get curl response from given url or false.
      *
      * @param string $url Url.
-     * @return array
+     * @return CurlHandle|false
      */
-    protected function get_curl($url): CurlHandle|false {
+    protected function get_curl(string $url): CurlHandle|false {
         // This has to be implemented in child class.
         return curl_init($url);
     }
@@ -223,7 +223,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param string $url Url.
      * @return bool|string
      */
-    protected function get_data($url): bool|string {
+    protected function get_data(string $url): bool|string {
         $handler = $this->get_curl($url);
         $data = curl_exec($handler);
         $json = json_decode($data);
@@ -268,10 +268,8 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return json_decode($branches);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_branch($name): false|stdClass {
+    #[\Override]
+    public function get_branch(string $name): false|stdClass {
         $branches = $this->get_branches();
         if (!$branches) {
             return false;
@@ -296,9 +294,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return 0;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function get_master_branch_last_updated(): false|int {
         $timestamp = $this->get_master_branch_last_updated_timestamp();
 
@@ -309,18 +305,14 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         return strtotime($timestamp);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_files($branch = false): false|array {
+    #[\Override]
+    public function get_files(bool $branch = false): array|false {
         // This has to be implemented in child class.
         return [];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_content($branch, $filepath): false|string {
+    #[\Override]
+    public function get_file_content(string $branch, string $filepath): false|string {
         // This has to be implemented in child class.
         return '';
     }
@@ -328,17 +320,15 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     /**
      * Get timestamp for last commit or 0.
      *
-     * @param $filepath
+     * @param string $filepath
      * @return false|int
      */
-    protected function get_file_last_commit($filepath): false|int {
+    protected function get_file_last_commit(string $filepath): false|int {
         // This has to be implemented in child class.
         return strtotime('0');
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function get_roles(): array {
         $roles = [];
         $files = $this->get_files();

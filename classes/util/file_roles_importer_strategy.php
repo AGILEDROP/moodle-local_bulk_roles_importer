@@ -38,23 +38,17 @@ use ZipArchive;
  */
 class file_roles_importer_strategy implements roles_importer_strategy_interface {
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_name(): string {
         return 'file';
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_last_updated(): int {
         return time();
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_roles(): array {
         $roles = [];
         $importfiledir = make_upload_directory('local_bulk_roles_importer');
@@ -136,6 +130,9 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
 
     /**
      * Remove directory and all its contents recursively.
+     *
+     * @param string $dirpath
+     * @return void
      */
     private function delete_directory_recursively(string $dirpath): void {
         if (is_dir($dirpath)) {
@@ -155,5 +152,4 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
             rmdir($dirpath);
         }
     }
-
 }

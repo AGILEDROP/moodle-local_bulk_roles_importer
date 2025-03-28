@@ -44,25 +44,18 @@ class github_roles_importer_strategy implements roles_importer_strategy_interfac
         $this->github = new github_api();
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_name(): string {
         return 'github';
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_last_updated(): int {
         return $this->github->get_master_branch_last_updated();
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_roles(): array {
         return $this->github->get_roles();
     }
-
 }

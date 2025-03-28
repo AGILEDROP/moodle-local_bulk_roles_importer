@@ -18,6 +18,7 @@ namespace local_bulk_roles_importer\form;
 
 defined('MOODLE_INTERNAL') || die();
 
+use coding_exception;
 use moodleform;
 
 /**
@@ -42,7 +43,7 @@ class importfromfile_form extends moodleform {
      *
      * @return void
      */
-    public function definition() {
+    public function definition(): void {
         $mform = $this->_form;
 
         $mform->addElement(

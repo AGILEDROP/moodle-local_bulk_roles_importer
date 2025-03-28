@@ -70,8 +70,10 @@ class roles_importer {
 
     /**
      * Constructor.
+     *
+     * @param string $loggingstyle
      */
-    public function __construct($loggingstyle = 'task') {
+    public function __construct(string $loggingstyle = 'task') {
         $this->rolemanager = new role_manager();
         $this->rolesimportstrategies = roles_importer_strategies_manager::get_strategies_classes();
         if (in_array($loggingstyle, self::LOGGING_STYLES, true)) {
@@ -82,7 +84,7 @@ class roles_importer {
     }
 
     /**
-     * Write out logs in prefered style.
+     * Write out logs in preferred style.
      *
      * @param string $message The message to log.
      * @return void
@@ -105,6 +107,8 @@ class roles_importer {
      * roles. Default is NULL which uses the currently selected automatic
      * strategy which you can select in the settings.
      * @return void
+     * @throws coding_exception
+     * @throws dml_exception
      */
     public function import_roles(string|null $strategy = null): void {
         if ($strategy === null) {
@@ -147,7 +151,7 @@ class roles_importer {
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function process_import($roles) {
+    private function process_import(array $roles): void {
 
         // Loop 1 - in first loop we create roles that do not exist yet.
         foreach ($roles as $role) {

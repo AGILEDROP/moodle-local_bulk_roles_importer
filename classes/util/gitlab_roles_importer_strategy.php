@@ -44,23 +44,17 @@ class gitlab_roles_importer_strategy implements roles_importer_strategy_interfac
         $this->gitlab = new gitlab_api();
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_name(): string {
         return 'gitlab';
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_last_updated(): int {
         return $this->gitlab->get_master_branch_last_updated();
     }
 
-    /**
-     * {inheritdoc}
-     */
+    #[\Override]
     public function get_roles(): array {
         return $this->gitlab->get_roles();
     }

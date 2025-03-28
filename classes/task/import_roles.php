@@ -37,17 +37,20 @@ use local_bulk_roles_importer\util\roles_importer_strategies_manager;
  * Define scheduled task for check Moodle users for system roles.
  */
 class import_roles extends scheduled_task {
+
     /**
      * Get task name.
      */
-    public function get_name() {
+    public function get_name(): \lang_string|string {
         return get_string('label:taskimportroles', 'local_bulk_roles_importer');
     }
 
     /**
      * Execute scheduled task.
+     *
+     * @return void
      */
-    public function execute() {
+    public function execute(): void {
         $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         if (!roles_importer_strategies_manager::is_strategy_automatic($strategy)) {
             mtrace('ERROR - source: ' . $strategy . ' is not automatic');

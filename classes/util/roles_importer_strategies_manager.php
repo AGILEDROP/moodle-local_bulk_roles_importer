@@ -96,9 +96,10 @@ class roles_importer_strategies_manager {
     /**
      * Get all strategies classes.
      *
+     * @param string $strategy
      * @return bool
      */
-    public static function is_strategy_automatic($strategy): bool {
+    public static function is_strategy_automatic(string $strategy): bool {
         $isautomatic = self::$rolesimporterstrategies[$strategy]['automatic'] ?? false;
         return $isautomatic;
     }

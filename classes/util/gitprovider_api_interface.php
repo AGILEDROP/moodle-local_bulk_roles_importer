@@ -40,10 +40,10 @@ interface gitprovider_api_interface {
     /**
      * Get selected branch info or false.
      *
-     * @param string $name Branch name.
-     * @return false|stdClass
+     * @param string $name
+     * @return stdClass|false
      */
-    public function get_branch($name): stdClass|false;
+    public function get_branch(string $name): stdClass|false;
 
     /**
      * Get timestamp of master branch last updated time or false.
@@ -55,19 +55,19 @@ interface gitprovider_api_interface {
     /**
      * Get files list for selected branch, by default from master branch.
      *
-     * @param $branch
-     * @return false|mixed
+     * @param bool $branch
+     * @return array|false
      */
-    public function get_files($branch = false): array|false;
+    public function get_files(bool $branch = false): array|false;
 
     /**
      * Get file content for selected filepath and branch.
+     *
      * @param string $branch Branch name.
      * @param string $filepath File path.
-     *
-     * @return false|string
+     * @return string|false
      */
-    public function get_file_content($branch, $filepath): string|false;
+    public function get_file_content(string $branch, string $filepath): string|false;
 
     /**
      * Get array of roles.

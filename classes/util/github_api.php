@@ -37,39 +37,29 @@ use local_bulk_roles_importer\util\gitprovider_api;
  */
 final class github_api extends gitprovider_api {
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'githuburl');
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'githubproject');
         $this->project = urlencode($project);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_masterbranch(): void {
         $this->masterbranch = get_config('local_bulk_roles_importer', 'githubmaster');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_curl($url): CurlHandle|false {
+    #[\Override]
+    public function get_curl(string $url): CurlHandle|false {
         $url = urldecode($url);
         $headers = [
             'Authorization: Bearer ' . $this->get_token(),
@@ -89,9 +79,7 @@ final class github_api extends gitprovider_api {
         return $handler;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function get_branches_url(): string {
         $url = $this->get_url();
         $url .= '/repos/';
@@ -101,9 +89,7 @@ final class github_api extends gitprovider_api {
         return $url;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function get_master_branch_last_updated_timestamp(): false|string {
         $url = $this->get_url();
         $url .= '/repos/';
@@ -117,10 +103,8 @@ final class github_api extends gitprovider_api {
         return $commit->commit->author->date ?? false;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_files($branch = false): false|array {
+    #[\Override]
+    public function get_files(bool $branch = false): array|false {
         if (!$branch) {
             $branch = $this->get_masterbranch();
         }
@@ -145,11 +129,8 @@ final class github_api extends gitprovider_api {
         return $files->tree;
     }
 
-    /**
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_content($branch, $filepath): false|string {
+    #[\Override]
+    public function get_file_content(string $branch, string $filepath): false|string {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();
@@ -163,10 +144,8 @@ final class github_api extends gitprovider_api {
         return base64_decode($contentbase46);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_last_commit($filepath): false|int {
+    #[\Override]
+    public function get_file_last_commit(string $filepath): false|int {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();

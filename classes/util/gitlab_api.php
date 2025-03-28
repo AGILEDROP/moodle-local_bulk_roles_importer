@@ -36,39 +36,29 @@ use CurlHandle;
  */
 final class gitlab_api extends gitprovider_api {
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'gitlaburl');
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'gitlabproject');
         $this->project = urlencode($project);
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function set_masterbranch(): void {
         $this->masterbranch = get_config('local_bulk_roles_importer', 'gitlabmaster');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_curl($url): CurlHandle|false {
+    #[\Override]
+    public function get_curl(string $url): CurlHandle|false {
         $headers = [
             'PRIVATE-TOKEN: ' . $this->get_token(),
         ];
@@ -84,9 +74,7 @@ final class gitlab_api extends gitprovider_api {
         return $handler;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function get_branches_url(): string {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
@@ -96,9 +84,7 @@ final class gitlab_api extends gitprovider_api {
         return $url;
     }
 
-    /**
-     * {@inheritdoc}
-     */
+    #[\Override]
     public function get_master_branch_last_updated_timestamp(): false|string {
         $masterbranch = $this->get_masterbranch();
         $branch = $this->get_branch($masterbranch);
@@ -110,9 +96,11 @@ final class gitlab_api extends gitprovider_api {
     }
 
     /**
-     * {@inheritdoc}
+     *
+     * @param bool $branch
+     * @return array|false
      */
-    public function get_files($branch = false): false|array {
+    public function get_files(bool $branch = false): array|false {
 
         if (!$branch) {
             $branch = $this->get_masterbranch();
@@ -139,10 +127,8 @@ final class gitlab_api extends gitprovider_api {
         return $files;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_content($branch, $filepath): false|string {
+    #[\Override]
+    public function get_file_content(string $branch, string $filepath): false|string {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
@@ -152,10 +138,8 @@ final class gitlab_api extends gitprovider_api {
         return $this->get_data($url);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_last_commit($filepath): false|int {
+    #[\Override]
+    public function get_file_last_commit(string $filepath): false|int {
         $url = $this->get_url();
         $url .= '/api/v4/projects/';
         $url .= $this->get_project();
