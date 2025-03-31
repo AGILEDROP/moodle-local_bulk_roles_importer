@@ -129,7 +129,7 @@ class roles_importer {
         $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
         if (!$this->lastchanges) {
-            $this->log_message('ERROR - cannot obtain master branch last updated time');
+            $this->log_message('ERROR - cannot obtain main branch last updated time');
             return;
         }
 

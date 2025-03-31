@@ -54,8 +54,8 @@ final class github_api extends gitprovider_api {
     }
 
     #[\Override]
-    public function set_masterbranch(): void {
-        $this->masterbranch = get_config('local_bulk_roles_importer', 'githubmaster');
+    public function set_mainbranch(): void {
+        $this->mainbranch = get_config('local_bulk_roles_importer', 'githubmain');
     }
 
     #[\Override]
@@ -90,12 +90,12 @@ final class github_api extends gitprovider_api {
     }
 
     #[\Override]
-    public function get_master_branch_last_updated_timestamp(): false|string {
+    public function get_main_branch_last_updated_timestamp(): false|string {
         $url = $this->get_url();
         $url .= '/repos/';
         $url .= $this->get_project();
         $url .= '/commits/';
-        $url .= $this->get_masterbranch();
+        $url .= $this->get_mainbranch();
 
         $commit = $this->get_data($url);
         $commit = json_decode($commit);
@@ -106,7 +106,7 @@ final class github_api extends gitprovider_api {
     #[\Override]
     public function get_files(bool $branch = false): array|false {
         if (!$branch) {
-            $branch = $this->get_masterbranch();
+            $branch = $this->get_mainbranch();
         }
 
         if (!$branch) {
@@ -150,7 +150,7 @@ final class github_api extends gitprovider_api {
         $url .= '/repos/';
         $url .= $this->get_project();
         $url .= '/commits?path=' . $filepath;
-        $url .= '&ref=' . $this->get_masterbranch();
+        $url .= '&ref=' . $this->get_mainbranch();
 
         $data = $this->get_data($url);
         $json = json_decode($data);

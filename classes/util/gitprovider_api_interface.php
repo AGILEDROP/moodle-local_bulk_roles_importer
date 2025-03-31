@@ -46,14 +46,14 @@ interface gitprovider_api_interface {
     public function get_branch(string $name): stdClass|false;
 
     /**
-     * Get timestamp of master branch last updated time or false.
+     * Get timestamp of main branch last updated time or false.
      *
      * @return false|int
      */
-    public function get_master_branch_last_updated(): int|false;
+    public function get_main_branch_last_updated(): int|false;
 
     /**
-     * Get files list for selected branch, by default from master branch.
+     * Get files list for selected branch, by default from main branch.
      *
      * @param bool $branch
      * @return array|false

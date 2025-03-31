@@ -80,15 +80,15 @@ $settingsmain->hide_if('local_bulk_roles_importer/gitlabproject',
     'neq',
     'gitlab');
 
-// GitLab - Master branch.
+// GitLab - Main branch.
 $setting = new admin_setting_configtext(
-    'local_bulk_roles_importer/gitlabmaster',
-    new lang_string('label:gitlabmaster', 'local_bulk_roles_importer'),
-    new lang_string('label:gitlabmaster_help', 'local_bulk_roles_importer'),
+    'local_bulk_roles_importer/gitlabmain',
+    new lang_string('label:gitlabmain', 'local_bulk_roles_importer'),
+    new lang_string('label:gitlabmain_help', 'local_bulk_roles_importer'),
     'main'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/gitlabmaster',
+$settingsmain->hide_if('local_bulk_roles_importer/gitlabmain',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'gitlab');

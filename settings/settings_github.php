@@ -80,15 +80,15 @@ $settingsmain->hide_if('local_bulk_roles_importer/githubproject',
     'neq',
     'github');
 
-// GitHub - Master branch.
+// GitHub - Main branch.
 $setting = new admin_setting_configtext(
-    'local_bulk_roles_importer/githubmaster',
-    new lang_string('label:githubmaster', 'local_bulk_roles_importer'),
-    new lang_string('label:githubmaster_help', 'local_bulk_roles_importer'),
+    'local_bulk_roles_importer/githubmain',
+    new lang_string('label:githubmain', 'local_bulk_roles_importer'),
+    new lang_string('label:githubmain_help', 'local_bulk_roles_importer'),
     'main'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/githubmaster',
+$settingsmain->hide_if('local_bulk_roles_importer/githubmain',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'github');
