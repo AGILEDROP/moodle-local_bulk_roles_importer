@@ -132,7 +132,11 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function get_file_last_commit(string $filepath): false|int {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'commits?path=' . $filepath . '&ref=' . $this->get_mainbranch()]);
+        $url = $this->build_api_url([
+                'repos',
+                $this->get_project(),
+                'commits?path=' . $filepath . '&ref=' . $this->get_mainbranch(),
+        ]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);

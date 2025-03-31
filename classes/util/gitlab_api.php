@@ -91,11 +91,7 @@ final class gitlab_api extends gitprovider_api {
         return $branch->commit->created_at ?? false;
     }
 
-    /**
-     *
-     * @param bool $branch
-     * @return array|false
-     */
+    #[\Override]
     public function get_files(?string $branch = null): array|false {
 
         if (!$branch) {
