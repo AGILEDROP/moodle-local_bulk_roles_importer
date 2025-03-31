@@ -94,10 +94,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return void
      */
-    protected function set_token(): void {
-        // This has to be implemented in child class.
-        $this->token = '';
-    }
+    abstract protected function set_token(): void;
 
     /**
      * Get access token.
@@ -114,11 +111,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return void
      * @throws dml_exception
      */
-    protected function set_project(): void {
-        // This has to be implemented in child class.
-        $project = '';
-        $this->project = urlencode($project);
-    }
+    abstract protected function set_project(): void;
 
     /**
      * Get project name.
@@ -135,10 +128,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return void
      * @throws dml_exception
      */
-    protected function set_mainbranch(): void {
-        // This has to be implemented in child class.
-        $this->mainbranch = '';
-    }
+    abstract protected function set_mainbranch(): void;
 
     /**
      * Get main/master branch name.
@@ -212,10 +202,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param string $url Url.
      * @return CurlHandle|false
      */
-    protected function get_curl(string $url): CurlHandle|false {
-        // This has to be implemented in child class.
-        return curl_init($url);
-    }
+    abstract protected function get_curl(string $url): CurlHandle|false;
 
     /**
      * Get json decoded response from given url or false.
@@ -247,10 +234,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    protected function get_branches_url(): string {
-        // This has to be implemented in child class.
-        return '';
-    }
+    abstract protected function get_branches_url(): string;
 
     /**
      * Get array of branches or false.
@@ -289,10 +273,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string|false
      */
-    protected function get_main_branch_last_updated_timestamp(): false|string {
-        // This has to be implemented in child class.
-        return 0;
-    }
+    abstract protected function get_main_branch_last_updated_timestamp(): false|string;
 
     #[\Override]
     public function get_main_branch_last_updated(): false|int {
@@ -306,16 +287,10 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     }
 
     #[\Override]
-    public function get_files(bool $branch = false): array|false {
-        // This has to be implemented in child class.
-        return [];
-    }
+    abstract public function get_files(?string $branch = null): array|false;
 
     #[\Override]
-    public function get_file_content(string $branch, string $filepath): false|string {
-        // This has to be implemented in child class.
-        return '';
-    }
+    abstract public function get_file_content(string $branch, string $filepath): false|string;
 
     /**
      * Get timestamp for last commit or 0.
@@ -323,10 +298,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param string $filepath
      * @return false|int
      */
-    protected function get_file_last_commit(string $filepath): false|int {
-        // This has to be implemented in child class.
-        return strtotime('0');
-    }
+    abstract protected function get_file_last_commit(string $filepath): false|int;
 
     #[\Override]
     public function get_roles(): array {
@@ -362,5 +334,20 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         }
 
         return $roles;
+    }
+
+
+    /**
+     * Build an API URL from the given parts.
+     *
+     * @param array $parts An array of URL parts.
+     * @return string The full API URL.
+     */
+    protected function build_api_url(array $parts): string {
+        $url = rtrim($this->get_url(), '/');
+        foreach ($parts as $part) {
+            $url .= '/' . ltrim($part, '/');
+        }
+        return $url;
     }
 }

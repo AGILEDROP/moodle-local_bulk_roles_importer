@@ -81,21 +81,14 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function get_branches_url(): string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/branches';
+        $url = $this->build_api_url(['repos', $this->get_project(), 'branches']);
 
         return $url;
     }
 
     #[\Override]
     public function get_main_branch_last_updated_timestamp(): false|string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/commits/';
-        $url .= $this->get_mainbranch();
+        $url = $this->build_api_url(['repos', $this->get_project(), 'commits', $this->get_mainbranch()]);
 
         $commit = $this->get_data($url);
         $commit = json_decode($commit);
@@ -104,7 +97,7 @@ final class github_api extends gitprovider_api {
     }
 
     #[\Override]
-    public function get_files(bool $branch = false): array|false {
+    public function get_files(?string $branch = null): array|false {
         if (!$branch) {
             $branch = $this->get_mainbranch();
         }
@@ -113,10 +106,7 @@ final class github_api extends gitprovider_api {
             return false;
         }
 
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/git/trees/' . $branch;
+        $url = $this->build_api_url(['repos', $this->get_project(), 'git/trees', $branch]);
 
         $files = $this->get_data($url);
 
@@ -131,11 +121,7 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function get_file_content(string $branch, string $filepath): false|string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/contents/' . $filepath;
-        $url .= '?ref=' . $branch;
+        $url = $this->build_api_url(['repos', $this->get_project(), 'contents', $filepath, '?ref=' . $branch]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);
@@ -146,11 +132,7 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function get_file_last_commit(string $filepath): false|int {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/commits?path=' . $filepath;
-        $url .= '&ref=' . $this->get_mainbranch();
+        $url = $this->build_api_url(['repos', $this->get_project(), 'commits?path=' . $filepath . '&ref=' . $this->get_mainbranch()]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);

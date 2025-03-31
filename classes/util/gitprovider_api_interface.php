@@ -55,10 +55,10 @@ interface gitprovider_api_interface {
     /**
      * Get files list for selected branch, by default from main branch.
      *
-     * @param bool $branch
+     * @param ?string $branch
      * @return array|false
      */
-    public function get_files(bool $branch = false): array|false;
+    public function get_files(?string $branch = null): array|false;
 
     /**
      * Get file content for selected filepath and branch.

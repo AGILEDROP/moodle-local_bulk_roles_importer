@@ -76,12 +76,8 @@ final class gitlab_api extends gitprovider_api {
 
     #[\Override]
     public function get_branches_url(): string {
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/branches';
 
-        return $url;
+        return $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/branches']);
     }
 
     #[\Override]
@@ -100,7 +96,7 @@ final class gitlab_api extends gitprovider_api {
      * @param bool $branch
      * @return array|false
      */
-    public function get_files(bool $branch = false): array|false {
+    public function get_files(?string $branch = null): array|false {
 
         if (!$branch) {
             $branch = $this->get_mainbranch();
@@ -110,11 +106,7 @@ final class gitlab_api extends gitprovider_api {
             return false;
         }
 
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/tree?ref=' . $branch;
-        $url .= '&per_page=100';
+        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/tree?ref=' . $branch . '&per_page=100']);
 
         $files = $this->get_data($url);
 
@@ -129,23 +121,19 @@ final class gitlab_api extends gitprovider_api {
 
     #[\Override]
     public function get_file_content(string $branch, string $filepath): false|string {
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/files/' . $filepath;
-        $url .= '/raw?ref=' . $branch;
+        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/files', $filepath, 'raw?ref=' . $branch]);
 
         return $this->get_data($url);
     }
 
     #[\Override]
     public function get_file_last_commit(string $filepath): false|int {
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/files/' . $filepath;
-        $url .= '/blame?ref=';
-        $url .= $this->get_mainbranch();
+        $url = $this->build_api_url([
+                'api/v4/projects',
+                $this->get_project(),
+                'repository/files', $filepath,
+                'blame?ref=' . $this->get_mainbranch(),
+        ]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);
