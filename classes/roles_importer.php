@@ -30,7 +30,6 @@
 namespace local_bulk_roles_importer;
 
 use coding_exception;
-use core_role_preset;
 use dml_exception;
 use local_bulk_roles_importer\util\role_manager;
 use local_bulk_roles_importer\util\roles_importer_strategies_manager;
@@ -53,7 +52,7 @@ class roles_importer {
     /** @var roles_importer_strategy_interface $rolesimportstrategy Last changes timestamp. */
     private roles_importer_strategy_interface $rolesimportstrategy;
 
-    /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strateties. */
+    /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strategies. */
     private array $rolesimportstrategies;
 
     /** @var string[] $LOGGING_STYLES Array of valid logging styles. */
@@ -73,14 +72,14 @@ class roles_importer {
      *
      * @param string $loggingstyle
      */
-    public function __construct(string $loggingstyle = 'task') {
-        $this->rolemanager = new role_manager();
-        $this->rolesimportstrategies = roles_importer_strategies_manager::get_strategies_classes();
-        if (in_array($loggingstyle, self::LOGGING_STYLES, true)) {
-            $this->loggingstyle = $loggingstyle;
-        } else {
-            $this->loggingstyle = 'task';
-        }
+    public function __construct(
+            string $loggingstyle = 'task',
+            ?role_manager $rolemanager = null,
+            ?array $rolesimportstrategies = null
+    ) {
+        $this->rolemanager = $rolemanager ?? new role_manager();
+        $this->rolesimportstrategies = $rolesimportstrategies ?: roles_importer_strategies_manager::get_strategies_classes();
+        $this->loggingstyle = in_array($loggingstyle, self::LOGGING_STYLES, true) ? $loggingstyle : 'task';
     }
 
     /**
@@ -110,22 +109,23 @@ class roles_importer {
      * @throws coding_exception
      * @throws dml_exception
      */
-    public function import_roles(string|null $strategy = null): void {
+    public function import_roles(?string $strategy = null): void {
         if ($strategy === null) {
             $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         }
-        if (!class_exists($this->rolesimportstrategies[$strategy])) {
+        if (!isset($this->rolesimportstrategies[$strategy]) || !class_exists($this->rolesimportstrategies[$strategy])) {
             $this->log_message('ERROR - source: ' . $strategy . ' does not exist');
             return;
         }
 
-        $this->log_message(self::SEPARATOR);
-        $this->log_message('  IMPORT ROLES FROM SOURCE: ' . $strategy);
-        $this->log_message(self::SEPARATOR);
+        $this->log_with_separators('  IMPORT ROLES FROM SOURCE: ' . $strategy, true, true);
 
         $this->lastimport = $this->rolemanager->get_lastimport();
 
-        $this->rolesimportstrategy = new $this->rolesimportstrategies[$strategy]();
+        $strategyclass = $this->rolesimportstrategies[$strategy];
+
+        $this->rolesimportstrategy = $this->make_strategy_instance($strategyclass);
+
         $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
         if (!$this->lastchanges) {
@@ -153,47 +153,50 @@ class roles_importer {
      */
     private function process_import(array $roles): void {
 
-        // Loop 1 - in first loop we create roles that do not exist yet.
+        $this->process_new_roles($roles);
+        $this->process_updated_roles($roles);
+
+        $this->rolemanager->update_lastimport(true);
+    }
+
+    /**
+     * Process creation of new roles.
+     *
+     * @param array $roles
+     * @return void
+     */
+    private function process_new_roles(array $roles): void {
         foreach ($roles as $role) {
-            if (!core_role_preset::is_valid_preset($role->xml)) {
+            if (!$this->is_valid_preset($role->xml)) {
                 $role->needupdate = false;
-                $this->log_message('invalid XML');
-                $this->log_message(self::SEPARATOR);
-                unset($role);
+                $this->log_with_separators('invalid XML', false, true);
                 continue;
             }
-
-            // Get moodle role.
             $moodlerole = $this->rolemanager->get_role($role->shortname);
             if ($moodlerole) {
-                // Check if need update.
                 $lastchange = $role->lastchange ?? 0;
-                if ($lastchange > $this->lastimport) {
-                    $role->needupdate = true;
-                } else {
-                    $role->needupdate = false;
-                }
+                $role->needupdate = ($lastchange > $this->lastimport);
                 continue;
             }
-
             $role->needupdate = true;
             $this->rolemanager->create_role_from_xml($role->xml);
-            $message = '   -' . $role->shortname . ' [created]';
-            $this->log_message($message);
-            $this->log_message(self::SEPARATOR);
+
+            $this->log_with_separators('   -' . $role->shortname . ' [created]', false, true);
         }
+    }
 
-        // Loop 2 - update roles.
+    /**
+     * Process updates for existing roles.
+     *
+     * @param array $roles
+     * @return void
+     */
+    private function process_updated_roles(array $roles): void {
         foreach ($roles as $role) {
-
-            $message = '   -';
-            $message .= $role->shortname;
-
-            $needupdate = $role->needupdate ?? false;
-            if (!$needupdate) {
+            $message = '   -' . $role->shortname;
+            if (empty($role->needupdate)) {
                 $message .= ' [X]';
             } else {
-                // Get moodle role.
                 $moodlerole = $this->rolemanager->get_role($role->shortname);
                 if (!$moodlerole) {
                     $message .= ' [Role not found]';
@@ -204,9 +207,45 @@ class roles_importer {
                 }
             }
 
-            $this->log_message($message);
+            $this->log_with_separators($message, false, true);
+        }
+    }
+
+    /**
+     * Check whether the given XML string is a valid role preset.
+     *
+     * @param string $xml
+     * @return bool
+     */
+    protected function is_valid_preset(string $xml): bool {
+        return \core_role_preset::is_valid_preset($xml);
+    }
+
+    /**
+     * Create an instance of the given roles importer strategy class.
+     *
+     * @param string $strategyclass
+     * @return roles_importer_strategy_interface
+     */
+    protected function make_strategy_instance(string $strategyclass): roles_importer_strategy_interface {
+        return new $strategyclass();
+    }
+
+    /**
+     * Log a message with optional separators.
+     *
+     * @param string $message The main message.
+     * @param bool $top_separator If true, log a separator before the message.
+     * @param bool $bottom_separator If true, log a separator after the message.
+     * @return void
+     */
+    protected function log_with_separators(string $message, bool $topseparator = false, bool $bottomseparator = false): void {
+        if ($topseparator) {
             $this->log_message(self::SEPARATOR);
         }
-        $this->rolemanager->update_lastimport(true);
+        $this->log_message($message);
+        if ($bottomseparator) {
+            $this->log_message(self::SEPARATOR);
+        }
     }
 }
