@@ -71,6 +71,8 @@ class roles_importer {
      * Constructor.
      *
      * @param string $loggingstyle
+     * @param role_manager|null $rolemanager
+     * @param array|null $rolesimportstrategies
      */
     public function __construct(
             string $loggingstyle = 'task',
@@ -156,7 +158,7 @@ class roles_importer {
         $this->process_new_roles($roles);
         $this->process_updated_roles($roles);
 
-        $this->rolemanager->update_lastimport(true);
+        $this->rolemanager->mark_last_import_success();
     }
 
     /**
@@ -235,8 +237,8 @@ class roles_importer {
      * Log a message with optional separators.
      *
      * @param string $message The main message.
-     * @param bool $top_separator If true, log a separator before the message.
-     * @param bool $bottom_separator If true, log a separator after the message.
+     * @param bool $topseparator
+     * @param bool $bottomseparator
      * @return void
      */
     protected function log_with_separators(string $message, bool $topseparator = false, bool $bottomseparator = false): void {

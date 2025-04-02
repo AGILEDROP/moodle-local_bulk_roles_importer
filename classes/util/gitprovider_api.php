@@ -150,11 +150,11 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     }
 
     /**
-     * Get error.
+     * Returns whether an error has occurred.
      *
      * @return bool
      */
-    protected function get_error(): bool {
+    protected function is_error(): bool {
         return $this->error;
     }
 

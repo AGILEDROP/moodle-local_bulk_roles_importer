@@ -60,7 +60,7 @@ class role_manager {
         $lastimport = get_config('local_bulk_roles_importer', 'roleslastimport');
         if (!$lastimport) {
             $lastimport = -1;
-            $this->update_lastimport(false);
+            $this->mark_last_import_failed();
         }
         $this->lastimport = $lastimport;
     }
@@ -93,19 +93,21 @@ class role_manager {
     }
 
     /**
-     * Update last role importing timestamp in config.
+     * Update last role importing timestamp in config to mark a successful import.
      *
-     * @param bool $sucess
      * @return void
      */
-    public function update_lastimport(bool $sucess = false): void {
-        if ($sucess) {
-            $lastimport = time();
-        } else {
-            $lastimport = -1;
-        }
+    public function mark_last_import_success(): void {
+        set_config('roleslastimport', time(), 'local_bulk_roles_importer');
+    }
 
-        set_config('roleslastimport', $lastimport, 'local_bulk_roles_importer');
+    /**
+     * Update last role importing timestamp in config to mark a failed import.
+     *
+     * @return void
+     */
+    public function mark_last_import_failed(): void {
+        set_config('roleslastimport', -1, 'local_bulk_roles_importer');
     }
 
     /**
@@ -340,13 +342,13 @@ class role_manager {
 
                 if ($currentvalue != $submittedvalue) {
                     // Change value.
-                    $assigned = assign_capability($capability, $submittedvalue, $roleid, $context, true);
+                    assign_capability($capability, $submittedvalue, $roleid, $context, true);
                     $changedcapability ++;
                 }
             } else {
                 if ($submittedvalue != 0) {
                     // Create new entry for current role.
-                    $assigned = assign_capability($capability, $submittedvalue, $roleid, $context, true);
+                    assign_capability($capability, $submittedvalue, $roleid, $context, true);
                     $changedcapability ++;
                 }
             }

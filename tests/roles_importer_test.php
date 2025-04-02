@@ -73,7 +73,7 @@ final class roles_importer_test extends advanced_testcase {
 
         $rolemanager->expects($this->once())->method('create_role_from_xml');
         $rolemanager->expects($this->once())->method('update_role_from_xml');
-        $rolemanager->expects($this->once())->method('update_lastimport');
+        $rolemanager->expects($this->once())->method('mark_last_import_success');
 
         // Mock strategy.
         $strategy = $this->createMock(roles_importer_strategy_interface::class);
@@ -132,16 +132,44 @@ final class roles_importer_test extends advanced_testcase {
 
         // Use a subclass that simulates invalid XML.
         $rolesimporter = new class('task', $rolemanager, ['mock' => get_class($strategy)]) extends roles_importer {
-            private $mockstrategy;
-            public function set_mock_strategy($strategy): void {
+            /**
+             * Mock strategy instance.
+             *
+             * @var roles_importer_strategy_interface
+             */
+            private roles_importer_strategy_interface $mockstrategy;
+
+            /**
+             * Inject mock strategy.
+             *
+             * @param roles_importer_strategy_interface $strategy
+             * @return void
+             */
+            public function set_mock_strategy(roles_importer_strategy_interface $strategy): void {
                 $this->mockstrategy = $strategy;
             }
 
-            protected function make_strategy_instance(string $class): roles_importer_strategy_interface {
+            /**
+             * Provide mock strategy instance.
+             *
+             * @param string $strategyclass
+             * @return roles_importer_strategy_interface
+             */
+            protected function make_strategy_instance(string $strategyclass): roles_importer_strategy_interface {
+                unset($strategyclass);
+
                 return $this->mockstrategy;
             }
 
+            /**
+             * Simulate invalid XML.
+             *
+             * @param string $xml
+             * @return bool
+             */
             protected function is_valid_preset(string $xml): bool {
+                unset($xml);
+
                 return false; // Pretend XML is invalid.
             }
         };
@@ -189,18 +217,47 @@ final class roles_importer_test extends advanced_testcase {
         // Create a fake strategy that returns no roles.
         $strategy = $this->createMock(roles_importer_strategy_interface::class);
         $strategy->method('get_last_updated')->willReturn(2000);
-        $strategy->method('get_roles')->willReturn([]); // <- no roles
+        $strategy->method('get_roles')->willReturn([]); // No roles returned.
 
         // Use a custom subclass to inject the strategy.
         $rolesimporter = new class('task', $rolemanager, ['mock' => get_class($strategy)]) extends roles_importer {
-            private $mockstrategy;
-            public function set_mock_strategy($strategy): void {
+            /**
+             * Mock strategy instance.
+             *
+             * @var roles_importer_strategy_interface
+             */
+            private roles_importer_strategy_interface $mockstrategy;
+
+            /**
+             * Inject mock strategy.
+             *
+             * @param roles_importer_strategy_interface $strategy
+             * @return void
+             */
+            public function set_mock_strategy(roles_importer_strategy_interface $strategy): void {
                 $this->mockstrategy = $strategy;
             }
-            protected function make_strategy_instance(string $class): roles_importer_strategy_interface {
+
+            /**
+             * Provide mock strategy instance.
+             *
+             * @param string $strategyclass
+             * @return roles_importer_strategy_interface
+             */
+            protected function make_strategy_instance(string $strategyclass): roles_importer_strategy_interface {
+                unset($strategyclass);
                 return $this->mockstrategy;
             }
+
+            /**
+             * Bypass preset validation.
+             *
+             * @param string $xml
+             * @return bool
+             */
             protected function is_valid_preset(string $xml): bool {
+                unset($xml);
+
                 return true;
             }
         };

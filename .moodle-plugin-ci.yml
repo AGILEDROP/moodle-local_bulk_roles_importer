@@ -1,0 +1,6 @@
+checks:
+  - validate
+  - phplint
+  - phpcs
+  - phpunit
+  - mustache
