@@ -67,6 +67,10 @@ class roles_importer {
     /** @var string $SEPARATOR Separator for logs. */
     private const SEPARATOR = '===================================================================================================';
 
+    /** @var string|null $importfilename Name of the import file. */
+    private ?string $importfilename = null;
+
+
     /**
      * Constructor.
      *
@@ -169,6 +173,11 @@ class roles_importer {
      */
     private function process_new_roles(array $roles): void {
         foreach ($roles as $role) {
+            // If the role is marked as invalid, skip it.
+            if (isset($role->invalid) && $role->invalid) {
+                continue;
+            }
+
             if (!$this->is_valid_preset($role->xml)) {
                 $role->needupdate = false;
                 $this->log_with_separators('invalid XML', false, true);
@@ -195,6 +204,12 @@ class roles_importer {
      */
     private function process_updated_roles(array $roles): void {
         foreach ($roles as $role) {
+            // If the role is marked as invalid, log a friendly error message.
+            if (isset($role->invalid) && $role->invalid) {
+                $this->log_with_separators('   -incorrect format in file: ' . $role->filename, false, true);
+                continue;
+            }
+
             $message = '   -' . $role->shortname;
             if (empty($role->needupdate)) {
                 $message .= ' [X]';
@@ -203,9 +218,19 @@ class roles_importer {
                 if (!$moodlerole) {
                     $message .= ' [Role not found]';
                 } else {
-                    $message .= ' [updated]';
-                    $roleid = (int)$moodlerole->id;
-                    $this->rolemanager->update_role_from_xml($roleid, $role->xml);
+                    try {
+                        $roleid = (int)$moodlerole->id;
+                        $this->rolemanager->update_role_from_xml($roleid, $role->xml);
+                        $message .= ' [updated]';
+                    } catch (\Throwable $e) {
+                        // Log a friendly error message instead of a PHP error.
+                        if ($role->filename) {
+                            $filename = $role->filename;
+                        } else {
+                            $filename = $this->importfilename;
+                        }
+                        $message .= ' incorrect format in file: ' . $filename;
+                    }
                 }
             }
 
@@ -249,5 +274,15 @@ class roles_importer {
         if ($bottomseparator) {
             $this->log_message(self::SEPARATOR);
         }
+    }
+
+    /**
+     * Set the filename of the import file.
+     *
+     * @param string $filename
+     * @return void
+     */
+    public function set_import_filename(string $filename): void {
+        $this->importfilename = $filename;
     }
 }

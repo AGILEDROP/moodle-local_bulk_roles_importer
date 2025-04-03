@@ -58,6 +58,6 @@ class import_roles extends scheduled_task {
         }
 
         $rolesimporter = new roles_importer();
-        $rolesimporter->import_roles();
+        $rolesimporter->import_roles($strategy);
     }
 }

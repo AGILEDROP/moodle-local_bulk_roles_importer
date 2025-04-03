@@ -38,6 +38,11 @@ use ZipArchive;
  */
 class file_roles_importer_strategy implements roles_importer_strategy_interface {
 
+    /**
+     * @var bool $iszip True if the file is a zip file.
+     */
+    private bool $iszip = false;
+
     #[\Override]
     public function get_name(): string {
         return 'file';
@@ -58,6 +63,8 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
         // Prepare files.
         $zip = new ZipArchive;
         if ($zip->open($importfilepath) === true) {
+            $this->iszip = true;
+
             $extractedfolder = $importfiledir  . DIRECTORY_SEPARATOR . "extracted_files";
             $this->delete_directory_recursively($extractedfolder);
             mkdir($extractedfolder, 0777, true);
@@ -84,6 +91,11 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
                 $role->shortname = $shortname;
                 $role->lastchange = time();
                 $role->xml = file_get_contents($filepath);
+                if ($this->iszip) {
+                    $role->filename = basename($filepath);
+                } else {
+                    $role->filename = null;
+                }
 
                 $roles[] = $role;
             }

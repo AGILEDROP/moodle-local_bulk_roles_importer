@@ -321,6 +321,18 @@ abstract class gitprovider_api implements gitprovider_api_interface {
             $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
             $xmlstring = simplexml_load_string($xml);
 
+            // Check if the XML is valid and has <role> as the root.
+            if (!$xmlstring || $xmlstring->getName() !== 'role') {
+                // Create an invalid role object that still stores the filename.
+                $role = new stdClass();
+                $role->invalid = true;
+                $role->filename = basename($file->path);
+                $role->lastchange = $lastcommit;
+                $role->xml = $xml;
+                $roles[] = $role;
+                continue;
+            }
+
             $json = json_encode($xmlstring);
             $jsondata = json_decode($json, true);
             $shortname = $jsondata['shortname'] ?? false;
@@ -328,6 +340,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
             $role = new stdClass();
             $role->shortname = $shortname;
             $role->lastchange = $lastcommit;
+            $role->filename = $file->path;
             $role->xml = $xml;
 
             $roles[] = $role;
