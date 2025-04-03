@@ -14,6 +14,7 @@ jobs:
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
+
       mariadb:
         image: mariadb:10.5
         env:
@@ -22,19 +23,37 @@ jobs:
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 3
+
     strategy:
       fail-fast: false
       matrix:
-        php-versions: ['8.3']
-        database: ['pgsql', 'mariadb']
+        include:
+          - moodle-branch: 'MOODLE_403_STABLE'
+            php: '8.2'
+            database: 'mariadb'
+          - moodle-branch: 'MOODLE_403_STABLE'
+            php: '8.2'
+            database: 'pgsql'
+          - moodle-branch: 'MOODLE_404_STABLE'
+            php: '8.3'
+            database: 'mariadb'
+          - moodle-branch: 'MOODLE_404_STABLE'
+            php: '8.3'
+            database: 'pgsql'
+          - moodle-branch: 'MOODLE_405_STABLE'
+            php: '8.3'
+            database: 'mariadb'
+          - moodle-branch: 'MOODLE_405_STABLE'
+            php: '8.3'
+            database: 'pgsql'
+
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
         with:
-          # Clone into the plugin subdirectory so CI can run from a standard location.
           path: plugin
 
-      - name: Install node
+      - name: Install Node.js
         uses: actions/setup-node@v1
         with:
           node-version: '14.15.0'
@@ -42,7 +61,7 @@ jobs:
       - name: Setup PHP environment
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-versions }}
+          php-version: ${{ matrix.php }}
           extensions: mbstring, pgsql, mysqli
           tools: phpunit
 
@@ -54,10 +73,15 @@ jobs:
           sudo locale-gen en_AU.UTF-8
 
       - name: Install moodle-plugin-ci
-        run: moodle-plugin-ci install -vvv --plugin ./plugin --db-host=127.0.0.1
+        run: |
+          if [ "${{ matrix.database }}" = "pgsql" ]; then
+            moodle-plugin-ci install -vvv --plugin ./plugin --db-host=postgres
+          else
+            moodle-plugin-ci install -vvv --plugin ./plugin --db-host=127.0.0.1
+          fi
         env:
           DB: ${{ matrix.database }}
-          MOODLE_BRANCH: 'MOODLE_405_STABLE'
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: Run phplint
         if: ${{ always() }}
