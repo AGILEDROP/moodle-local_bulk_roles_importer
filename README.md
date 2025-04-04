@@ -9,7 +9,8 @@ configure an external repository for automatic updates.
 Upload a single XML file or a ZIP archive containing multiple XML files with role definitions.
 
 - **Automatic Import:**
-Configure a repository (e.g. GitHub, GitLab, or a file-based repository) as the source for role XML files and schedule regular imports. The plugin will automatically fetch and update roles when changes are detected.
+Configure a repository (e.g. GitHub, GitLab) as the source for role XML files and define a schedule for periodic imports.
+At each scheduled time, the plugin will fetch the latest role definitions and update Moodle roles accordingly.
 
 ### Manual Import
 
