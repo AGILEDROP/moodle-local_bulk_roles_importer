@@ -29,15 +29,15 @@
 
 namespace local_bulk_roles_importer\util;
 
+use local_bulk_roles_importer\traits\role_file_processor;
 use moodle_exception;
-use stdClass;
 use ZipArchive;
 
 /**
  * Roles importing strategy for a file.
  */
 class file_roles_importer_strategy implements roles_importer_strategy_interface {
-
+    use role_file_processor;
     /**
      * @var bool $iszip True if the file is a zip file.
      */
@@ -57,7 +57,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
     public function get_roles(): array {
         $roles = [];
         $importfiledir = make_upload_directory('local_bulk_roles_importer');
-        $importfilepath = $importfiledir  . DIRECTORY_SEPARATOR . "import_roles_file";
+        $importfilepath = $importfiledir . DIRECTORY_SEPARATOR . "import_roles_file";
         $filepaths = [];
 
         // Prepare files.
@@ -65,7 +65,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
         if ($zip->open($importfilepath) === true) {
             $this->iszip = true;
 
-            $extractedfolder = $importfiledir  . DIRECTORY_SEPARATOR . "extracted_files";
+            $extractedfolder = $importfiledir . DIRECTORY_SEPARATOR . "extracted_files";
             $this->delete_directory_recursively($extractedfolder);
             mkdir($extractedfolder, 0777, true);
             $zip->extractTo($extractedfolder);
@@ -81,31 +81,21 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
 
         // Process XML files.
         foreach ($filepaths as $filepath) {
-            $xmlobject = simplexml_load_file($filepath);
-            if ($xmlobject) {
-                $json = json_encode($xmlobject);
-                $jsondata = json_decode($json, true);
-                $shortname = $jsondata['shortname'] ?? false;
+            $role = $this->process_role_file_from_path($filepath, time());
 
-                $role = new stdClass();
-                $role->shortname = $shortname;
-                $role->lastchange = time();
-                $role->xml = file_get_contents($filepath);
-                if ($this->iszip) {
-                    $role->filename = basename($filepath);
-                } else {
-                    $role->filename = null;
-                }
-
-                $roles[] = $role;
+            // Override filename for display if imported from ZIP.
+            if ($this->iszip) {
+                $role->filename = basename($filepath);
             }
+
+            $roles[] = $role;
         }
 
-        // Cleanup - Delete file and extracted files.
         $this->delete_directory_recursively($importfiledir);
 
         return $roles;
     }
+
 
     /**
      * Remove directory and all its contents recursively.

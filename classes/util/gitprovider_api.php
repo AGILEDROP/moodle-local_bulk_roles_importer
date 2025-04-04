@@ -31,12 +31,14 @@ namespace local_bulk_roles_importer\util;
 
 use CurlHandle;
 use dml_exception;
+use local_bulk_roles_importer\traits\role_file_processor;
 use stdClass;
 
 /**
  * Definition class for Git provider API.
  */
 abstract class gitprovider_api implements gitprovider_api_interface {
+    use role_file_processor;
 
     /** @var string $url Url link to root of repositories. */
     protected string $url;
@@ -328,10 +330,11 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         }
 
         foreach ($files as $file) {
-            $role = $this->process_role_file($file);
-            if ($role !== null) {
-                $roles[] = $role;
-            }
+            $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
+            $lastcommit = $this->get_file_last_commit($file->path);
+
+            $role = $this->process_role_file_from_string($xml, $file->path, $lastcommit);
+            $roles[] = $role;
         }
 
         return $roles;
