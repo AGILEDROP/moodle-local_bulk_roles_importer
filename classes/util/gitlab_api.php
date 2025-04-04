@@ -38,7 +38,7 @@ final class gitlab_api extends gitprovider_api {
 
     #[\Override]
     public function set_url(): void {
-        $this->url = get_config('local_bulk_roles_importer', 'gitlaburl');
+        $this->url = $this->get_config_with_default('gitlaburl', 'https://gitlab.com');
     }
 
     #[\Override]
@@ -48,13 +48,13 @@ final class gitlab_api extends gitprovider_api {
 
     #[\Override]
     public function set_project(): void {
-        $project = get_config('local_bulk_roles_importer', 'gitlabproject');
+        $project = $this->get_config_with_default('gitlabproject', 'moodle/template-01/roles');
         $this->project = urlencode($project);
     }
 
     #[\Override]
     public function set_mainbranch(): void {
-        $this->mainbranch = get_config('local_bulk_roles_importer', 'gitlabmain');
+        $this->mainbranch = $this->get_config_with_default('gitlabmain', 'main');
     }
 
     #[\Override]

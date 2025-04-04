@@ -39,7 +39,7 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function set_url(): void {
-        $this->url = get_config('local_bulk_roles_importer', 'githuburl');
+        $this->url = $this->get_config_with_default('githuburl', 'https://api.github.com');
     }
 
     #[\Override]
@@ -49,13 +49,13 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function set_project(): void {
-        $project = get_config('local_bulk_roles_importer', 'githubproject');
+        $project = $this->get_config_with_default('githubproject', 'moodle/template-01/roles');
         $this->project = urlencode($project);
     }
 
     #[\Override]
     public function set_mainbranch(): void {
-        $this->mainbranch = get_config('local_bulk_roles_importer', 'githubmain');
+        $this->mainbranch = $this->get_config_with_default('githubmain', 'main');
     }
 
     #[\Override]

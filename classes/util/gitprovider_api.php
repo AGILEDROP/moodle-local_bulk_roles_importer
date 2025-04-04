@@ -76,9 +76,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return void
      * @throws dml_exception
      */
-    protected function set_url(): void {
-        $this->url = get_config('local_bulk_roles_importer', 'githuburl');
-    }
+    abstract protected function set_url(): void;
 
     /**
      * Get url.
@@ -129,6 +127,19 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @throws dml_exception
      */
     abstract protected function set_mainbranch(): void;
+
+    /**
+     * Get config with default value.
+     *
+     * @param string $configname
+     * @param string $default
+     * @return string
+     * @throws dml_exception
+     */
+    protected function get_config_with_default(string $configname, string $default): string {
+        $value = get_config('local_bulk_roles_importer', $configname);
+        return empty($value) ? $default : $value;
+    }
 
     /**
      * Get main/master branch name.
@@ -317,45 +328,54 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         }
 
         foreach ($files as $file) {
-            $fileinfo = pathinfo($file->path);
-            $filetype = $fileinfo['extension'] ?? '';
-
-            if ($filetype != 'xml') {
-                continue;
-            }
-
-            $lastcommit = $this->get_file_last_commit($file->path);
-            $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
-            $xmlstring = simplexml_load_string($xml);
-
-            // Check if the XML is valid and has <role> as the root.
-            if (!$xmlstring || $xmlstring->getName() !== 'role') {
-                // Create an invalid role object that still stores the filename.
-                $role = new stdClass();
-                $role->invalid = true;
-                $role->filename = basename($file->path);
-                $role->lastchange = $lastcommit;
-                $role->xml = $xml;
+            $role = $this->process_role_file($file);
+            if ($role !== null) {
                 $roles[] = $role;
-                continue;
             }
-
-            $json = json_encode($xmlstring);
-            $jsondata = json_decode($json, true);
-            $shortname = $jsondata['shortname'] ?? false;
-
-            $role = new stdClass();
-            $role->shortname = $shortname;
-            $role->lastchange = $lastcommit;
-            $role->filename = $file->path;
-            $role->xml = $xml;
-
-            $roles[] = $role;
         }
 
         return $roles;
     }
 
+    /**
+     * Process a file and return a role object.
+     *
+     * If the file is not an XML or does not contain a <role> root element,
+     * an "invalid" role object is returned with the filename and XML contents.
+     *
+     * @param object $file A file object with a 'path' property.
+     * @return \stdClass|null The role object, or null if the file should be skipped.
+     */
+    protected function process_role_file(object $file): ?\stdClass {
+        $fileinfo = pathinfo($file->path);
+        $filetype = strtolower($fileinfo['extension'] ?? '');
+
+        // Skip non-XML files.
+        if ($filetype !== 'xml') {
+            return null;
+        }
+
+        $lastcommit = $this->get_file_last_commit($file->path);
+        $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
+        $xmlstring = simplexml_load_string($xml);
+
+        $role = new \stdClass();
+        $role->lastchange = $lastcommit;
+        $role->xml = $xml;
+
+        // Check if the XML is valid and has <role> as the root.
+        if (!$xmlstring || $xmlstring->getName() !== 'role') {
+            $role->invalid = true;
+            $role->filename = basename($file->path);
+        } else {
+            $json = json_encode($xmlstring);
+            $jsondata = json_decode($json, true);
+            $role->shortname = $jsondata['shortname'] ?? false;
+            $role->filename = $file->path;
+        }
+
+        return $role;
+    }
 
     /**
      * Build an API URL from the given parts.
