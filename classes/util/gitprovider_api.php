@@ -212,6 +212,13 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      */
     protected function get_data(string $url): bool|string {
         $handler = $this->get_curl($url);
+
+        if ($handler === false) {
+            $this->set_error(true);
+            $this->set_errormessage('Failed to initialize cURL.');
+            return false;
+        }
+
         $data = curl_exec($handler);
         $json = json_decode($data);
 
