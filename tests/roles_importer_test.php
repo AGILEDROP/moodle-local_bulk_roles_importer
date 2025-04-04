@@ -76,22 +76,22 @@ final class roles_importer_test extends advanced_testcase {
         $rolemanager->expects($this->once())->method('mark_last_import_success');
 
         // Mock strategy.
+        $newrole = (object)[
+                'xml' => '<valid>xml</valid>',
+                'shortname' => 'newrole',
+                'lastchange' => 3000,
+        ];
+        $existingrole = (object)[
+                'xml' => '<valid>xml</valid>',
+                'shortname' => 'existingrole',
+                'lastchange' => 2001,
+        ];
+
         $strategy = $this->createMock(roles_importer_strategy_interface::class);
         $strategy->method('get_last_updated')->willReturn(2000);
-        $strategy->method('get_roles')->willReturn([
-                (object)[
-                        'xml' => '<valid>xml</valid>',
-                        'shortname' => 'newrole',
-                        'lastchange' => 3000,
-                ],
-                (object)[
-                        'xml' => '<valid>xml</valid>',
-                        'shortname' => 'existingrole',
-                        'lastchange' => 2001,
-                ],
-        ]);
+        $strategy->method('get_roles')->willReturn([$newrole, $existingrole]);
 
-        // Now instantiate the testable importer with strategy name mapped.
+        // Instantiate testable importer.
         $rolesimporter = new testable_roles_importer('task', $rolemanager, [
                 'mock' => get_class($strategy),
         ]);
@@ -100,7 +100,12 @@ final class roles_importer_test extends advanced_testcase {
         // Run the test.
         ob_start();
         $rolesimporter->import_roles('mock');
-        ob_end_clean();
+        $output = ob_get_clean();
+
+        $this->assertTrue($newrole->needupdate, 'New role should be marked as needing update');
+        $this->assertTrue($existingrole->needupdate, 'Existing role should be marked as needing update');
+        $this->assertStringContainsString('newrole [created]', $output);
+        $this->assertStringContainsString('existingrole [updated]', $output);
     }
 
     /**
