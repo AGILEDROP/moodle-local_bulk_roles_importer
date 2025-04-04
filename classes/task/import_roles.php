@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\task;
-
 /**
  * Task to import roles from selected source.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\task;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\task;
+
 use core\task\scheduled_task;
 use local_bulk_roles_importer\roles_importer;
 use local_bulk_roles_importer\util\roles_importer_strategies_manager;
@@ -37,24 +37,27 @@ use local_bulk_roles_importer\util\roles_importer_strategies_manager;
  * Define scheduled task for check Moodle users for system roles.
  */
 class import_roles extends scheduled_task {
+
     /**
      * Get task name.
      */
-    public function get_name() {
+    public function get_name(): \lang_string|string {
         return get_string('label:taskimportroles', 'local_bulk_roles_importer');
     }
 
     /**
      * Execute scheduled task.
+     *
+     * @return void
      */
-    public function execute() {
+    public function execute(): void {
         $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         if (!roles_importer_strategies_manager::is_strategy_automatic($strategy)) {
             mtrace('ERROR - source: ' . $strategy . ' is not automatic');
             return;
         }
 
-        $roles_importer = new roles_importer();
-        $roles_importer->import_roles();
+        $rolesimporter = new roles_importer();
+        $rolesimporter->import_roles($strategy);
     }
 }

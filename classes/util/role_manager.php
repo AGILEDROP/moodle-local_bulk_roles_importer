@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Utility class - role manager.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\util;
+
 use coding_exception;
 use context_system;
 use core_role_define_role_table_advanced;
@@ -41,7 +41,7 @@ use dml_exception;
 class role_manager {
 
     /** @var int $lastimport Timestamp of last role importing. */
-    private $lastimport;
+    private int $lastimport;
 
     /**
      * Constructor method.
@@ -56,11 +56,11 @@ class role_manager {
      * @return void
      * @throws dml_exception
      */
-    public function set_lastimport() {
+    public function set_lastimport(): void {
         $lastimport = get_config('local_bulk_roles_importer', 'roleslastimport');
         if (!$lastimport) {
             $lastimport = -1;
-            $this->update_lastimport(false);
+            $this->mark_last_import_failed();
         }
         $this->lastimport = $lastimport;
     }
@@ -70,7 +70,7 @@ class role_manager {
      *
      * @return int
      */
-    public function get_lastimport() {
+    public function get_lastimport(): int {
         return $this->lastimport;
     }
 
@@ -78,10 +78,9 @@ class role_manager {
      * Check if role with given shortname exist.
      *
      * @param string $name Role shortname.
-     *
      * @return false|mixed Return role data object if exist otherwise false.
      */
-    public function role_exist($name) {
+    public function role_exist($name): mixed {
         $roles = get_all_roles();
 
         foreach ($roles as $role) {
@@ -94,19 +93,21 @@ class role_manager {
     }
 
     /**
-     * Update last role importing timestamp in config.
+     * Update last role importing timestamp in config to mark a successful import.
      *
-     * @param bool $sucess
      * @return void
      */
-    public function update_lastimport($sucess = false) {
-        if ($sucess) {
-            $lastimport = time();
-        } else {
-            $lastimport = -1;
-        }
+    public function mark_last_import_success(): void {
+        set_config('roleslastimport', time(), 'local_bulk_roles_importer');
+    }
 
-        set_config('roleslastimport', $lastimport, 'local_bulk_roles_importer');
+    /**
+     * Update last role importing timestamp in config to mark a failed import.
+     *
+     * @return void
+     */
+    public function mark_last_import_failed(): void {
+        set_config('roleslastimport', -1, 'local_bulk_roles_importer');
     }
 
     /**
@@ -118,7 +119,7 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    public function create_role_from_xml($xml) {
+    public function create_role_from_xml($xml): void {
         $options = [
             'shortname' => 1,
             'name' => 1,
@@ -148,7 +149,7 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    public function update_role_from_xml($roleid, $xml) {
+    public function update_role_from_xml(int $roleid, string $xml): void {
 
         $preset = core_role_preset::parse_preset($xml);
 
@@ -186,10 +187,11 @@ class role_manager {
      * @param string $name Visible role name.
      * @param string $description Role description.
      * @param string $archetype Role archetype.
+     *
      * @return void
      * @throws dml_exception
      */
-    private function update_role_info($roleid, $name, $description, $archetype) {
+    private function update_role_info(int $roleid, string $name, string $description, string $archetype): void {
         global $DB;
 
         $conditions = [
@@ -211,7 +213,7 @@ class role_manager {
      * @return void
      * @throws dml_exception
      */
-    private function update_contextlevels($roleid, $contextlevels) {
+    private function update_contextlevels(int $roleid, array $contextlevels): void {
         global $DB;
 
         // Get current context levels.
@@ -254,7 +256,7 @@ class role_manager {
      * @return void
      * @throws dml_exception
      */
-    private function update_allows($allowtype, $roleid, $permissions) {
+    private function update_allows(string $allowtype, int $roleid, array $permissions): void {
         global $DB;
 
         // Remove value '-1' from permissions.
@@ -304,11 +306,12 @@ class role_manager {
      *
      * @param int $roleid Moodle role id.
      * @param array $permissions Array of permissions.
+     *
      * @return void
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function update_permissions($roleid, $permissions) {
+    private function update_permissions(int $roleid, array $permissions): void {
         global $DB;
 
         // Get all defined capabilities in Moodle.
@@ -339,13 +342,13 @@ class role_manager {
 
                 if ($currentvalue != $submittedvalue) {
                     // Change value.
-                    $assigned = assign_capability($capability, $submittedvalue, $roleid, $context, true);
+                    assign_capability($capability, $submittedvalue, $roleid, $context, true);
                     $changedcapability ++;
                 }
             } else {
                 if ($submittedvalue != 0) {
                     // Create new entry for current role.
-                    $assigned = assign_capability($capability, $submittedvalue, $roleid, $context, true);
+                    assign_capability($capability, $submittedvalue, $roleid, $context, true);
                     $changedcapability ++;
                 }
             }
@@ -361,7 +364,7 @@ class role_manager {
      * @param string $shortname Role shortname.
      * @return false|mixed
      */
-    public function get_role($shortname) {
+    public function get_role(string $shortname): mixed {
         $roles = get_all_roles();
 
         foreach ($roles as $role) {

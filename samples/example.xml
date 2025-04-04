@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<role>
+    <shortname>example</shortname>
+    <name>Example Role</name>
+    <description>This is a simplified example role for demonstration purposes.</description>
+    <archetype>user</archetype>
+    <contextlevels/>
+    <allowassign/>
+    <allowoverride/>
+    <allowswitch/>
+    <allowview/>
+    <permissions>
+        <inherit>moodle/user:view</inherit>
+        <inherit>moodle/course:view</inherit>
+    </permissions>
+</role>

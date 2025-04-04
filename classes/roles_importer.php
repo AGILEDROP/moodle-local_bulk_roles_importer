@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer;
-
 /**
  * Context for roles importing strategies.
  *
@@ -29,8 +27,9 @@ namespace local_bulk_roles_importer;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer;
+
 use coding_exception;
-use core_role_preset;
 use dml_exception;
 use local_bulk_roles_importer\util\role_manager;
 use local_bulk_roles_importer\util\roles_importer_strategies_manager;
@@ -53,7 +52,7 @@ class roles_importer {
     /** @var roles_importer_strategy_interface $rolesimportstrategy Last changes timestamp. */
     private roles_importer_strategy_interface $rolesimportstrategy;
 
-    /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strateties. */
+    /** @var roles_importer_strategy_interface[] $rolesimportstrategies All available roles importer strategies. */
     private array $rolesimportstrategies;
 
     /** @var string[] $LOGGING_STYLES Array of valid logging styles. */
@@ -65,22 +64,32 @@ class roles_importer {
     /** @var string $loggingstyle Selected logging style. */
     private string $loggingstyle;
 
+    /** @var string $SEPARATOR Separator for logs. */
+    private const SEPARATOR = '===================================================================================================';
+
+    /** @var string|null $importfilename Name of the import file. */
+    private ?string $importfilename = null;
+
+
     /**
      * Constructor.
+     *
+     * @param string $loggingstyle
+     * @param role_manager|null $rolemanager
+     * @param array|null $rolesimportstrategies
      */
-    public function __construct($loggingstyle = 'task') {
-        $this->rolemanager = new role_manager();
-        $this->rolesimportstrategies = roles_importer_strategies_manager::get_strategies_classes();
-        if (in_array($loggingstyle, self::LOGGING_STYLES, true)) {
-            $this->loggingstyle = $loggingstyle;
-        }
-        else {
-            $this->loggingstyle = 'task';
-        }
+    public function __construct(
+            string $loggingstyle = 'task',
+            ?role_manager $rolemanager = null,
+            ?array $rolesimportstrategies = null
+    ) {
+        $this->rolemanager = $rolemanager ?? new role_manager();
+        $this->rolesimportstrategies = $rolesimportstrategies ?: roles_importer_strategies_manager::get_strategies_classes();
+        $this->loggingstyle = in_array($loggingstyle, self::LOGGING_STYLES, true) ? $loggingstyle : 'task';
     }
 
     /**
-     * Write out logs in prefered style.
+     * Write out logs in preferred style.
      *
      * @param string $message The message to log.
      * @return void
@@ -103,27 +112,30 @@ class roles_importer {
      * roles. Default is NULL which uses the currently selected automatic
      * strategy which you can select in the settings.
      * @return void
+     * @throws coding_exception
+     * @throws dml_exception
      */
-    public function import_roles(string|null $strategy = null): void {
+    public function import_roles(?string $strategy = null): void {
         if ($strategy === null) {
             $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         }
-        if (!class_exists($this->rolesimportstrategies[$strategy])) {
+        if (!isset($this->rolesimportstrategies[$strategy]) || !class_exists($this->rolesimportstrategies[$strategy])) {
             $this->log_message('ERROR - source: ' . $strategy . ' does not exist');
             return;
         }
 
-        $this->log_message('=======================================================================================================');
-        $this->log_message('  IMPORT ROLES FROM SOURCE: ' . $strategy);
-        $this->log_message('=======================================================================================================');
+        $this->log_with_separators('  IMPORT ROLES FROM SOURCE: ' . $strategy, true, true);
 
         $this->lastimport = $this->rolemanager->get_lastimport();
 
-        $this->rolesimportstrategy = new $this->rolesimportstrategies[$strategy]();
+        $strategyclass = $this->rolesimportstrategies[$strategy];
+
+        $this->rolesimportstrategy = $this->make_strategy_instance($strategyclass);
+
         $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
         if (!$this->lastchanges) {
-            $this->log_message('ERROR - cannot obtain master branch last updated time');
+            $this->log_message('ERROR - cannot obtain main branch last updated time');
             return;
         }
 
@@ -145,63 +157,132 @@ class roles_importer {
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function process_import($roles) {
-        $separator = '=======================================================================================================';
+    private function process_import(array $roles): void {
 
-        // Loop 1 - in first loop we create roles that do not exist yet.
+        $this->process_new_roles($roles);
+        $this->process_updated_roles($roles);
+
+        $this->rolemanager->mark_last_import_success();
+    }
+
+    /**
+     * Process creation of new roles.
+     *
+     * @param array $roles
+     * @return void
+     */
+    private function process_new_roles(array $roles): void {
         foreach ($roles as $role) {
-            if (!core_role_preset::is_valid_preset($role->xml)) {
-                $role->needupdate = false;
-                $this->log_message('invalid XML');
-                $this->log_message($separator);
-                unset($role);
+            // If the role is marked as invalid, skip it.
+            if (isset($role->invalid) && $role->invalid) {
                 continue;
             }
 
-            // Get moodle role.
+            if (!$this->is_valid_preset($role->xml)) {
+                $role->needupdate = false;
+                $this->log_with_separators('invalid XML', false, true);
+                continue;
+            }
             $moodlerole = $this->rolemanager->get_role($role->shortname);
             if ($moodlerole) {
-                // Check if need update.
                 $lastchange = $role->lastchange ?? 0;
-                if ($lastchange > $this->lastimport) {
-                    $role->needupdate = true;
-                } else {
-                    $role->needupdate = false;
-                }
+                $role->needupdate = ($lastchange > $this->lastimport);
+                continue;
+            }
+            $role->needupdate = true;
+            $this->rolemanager->create_role_from_xml($role->xml);
+
+            $this->log_with_separators('   -' . $role->shortname . ' [created]', false, true);
+        }
+    }
+
+    /**
+     * Process updates for existing roles.
+     *
+     * @param array $roles
+     * @return void
+     */
+    private function process_updated_roles(array $roles): void {
+        foreach ($roles as $role) {
+            // If the role is marked as invalid, log a friendly error message.
+            if (isset($role->invalid) && $role->invalid) {
+                $this->log_with_separators('   -incorrect format in file: ' . $role->filename, false, true);
                 continue;
             }
 
-            $role->needupdate = true;
-            $this->rolemanager->create_role_from_xml($role->xml);
-            $message = '   -' . $role->shortname . ' [created]';
-            $this->log_message($message);
-            $this->log_message($separator);
-        }
-
-        // Loop 2 - update roles.
-        foreach ($roles as $role) {
-
-            $message = '   -';
-            $message .= $role->shortname;
-
-            $needupdate = $role->needupdate ?? false;
-            if (!$needupdate) {
+            $message = '   -' . $role->shortname;
+            if (empty($role->needupdate)) {
                 $message .= ' [X]';
             } else {
-                // Get moodle role.
                 $moodlerole = $this->rolemanager->get_role($role->shortname);
                 if (!$moodlerole) {
                     $message .= ' [Role not found]';
                 } else {
-                    $message .= ' [updated]';
-                    $roleid = (int)$moodlerole->id;
-                    $this->rolemanager->update_role_from_xml($roleid, $role->xml);
+                    try {
+                        $roleid = (int)$moodlerole->id;
+                        $this->rolemanager->update_role_from_xml($roleid, $role->xml);
+                        $message .= ' [updated]';
+                    } catch (\Throwable $e) {
+                        // Log a friendly error message instead of a PHP error.
+                        if ($role->filename) {
+                            $filename = $role->filename;
+                        } else {
+                            $filename = $this->importfilename;
+                        }
+                        $message .= ' incorrect format in file: ' . $filename;
+                    }
                 }
             }
 
-            $this->log_message($message);
-            $this->log_message('=======================================================================================================');
+            $this->log_with_separators($message, false, true);
         }
-        $this->rolemanager->update_lastimport(true);
+    }
+
+    /**
+     * Check whether the given XML string is a valid role preset.
+     *
+     * @param string $xml
+     * @return bool
+     */
+    protected function is_valid_preset(string $xml): bool {
+        return \core_role_preset::is_valid_preset($xml);
+    }
+
+    /**
+     * Create an instance of the given roles importer strategy class.
+     *
+     * @param string $strategyclass
+     * @return roles_importer_strategy_interface
+     */
+    protected function make_strategy_instance(string $strategyclass): roles_importer_strategy_interface {
+        return new $strategyclass();
+    }
+
+    /**
+     * Log a message with optional separators.
+     *
+     * @param string $message The main message.
+     * @param bool $topseparator
+     * @param bool $bottomseparator
+     * @return void
+     */
+    protected function log_with_separators(string $message, bool $topseparator = false, bool $bottomseparator = false): void {
+        if ($topseparator) {
+            $this->log_message(self::SEPARATOR);
+        }
+        $this->log_message($message);
+        if ($bottomseparator) {
+            $this->log_message(self::SEPARATOR);
+        }
+    }
+
+    /**
+     * Set the filename of the import file.
+     *
+     * @param string $filename
+     * @return void
+     */
+    public function set_import_filename(string $filename): void {
+        $this->importfilename = $filename;
     }
 }

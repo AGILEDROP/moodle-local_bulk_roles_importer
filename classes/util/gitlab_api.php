@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Utility class - GitLab API.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\util;
+
 use CurlHandle;
 
 /**
@@ -36,39 +36,29 @@ use CurlHandle;
  */
 final class gitlab_api extends gitprovider_api {
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_url(): void {
+    #[\Override]
+    public function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'gitlaburl');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_token(): void {
+    #[\Override]
+    public function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_project(): void {
+    #[\Override]
+    public function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'gitlabproject');
         $this->project = urlencode($project);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_masterbranch():void {
-        $this->masterbranch = get_config('local_bulk_roles_importer', 'gitlabmaster');
+    #[\Override]
+    public function set_mainbranch(): void {
+        $this->mainbranch = get_config('local_bulk_roles_importer', 'gitlabmain');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_curl($url): CurlHandle|false {
+    #[\Override]
+    public function get_curl(string $url): CurlHandle|false {
         $headers = [
             'PRIVATE-TOKEN: ' . $this->get_token(),
         ];
@@ -84,24 +74,16 @@ final class gitlab_api extends gitprovider_api {
         return $handler;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_branches_url(): string {
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/branches';
+    #[\Override]
+    public function get_branches_url(): string {
 
-        return $url;
+        return $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/branches']);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_master_branch_last_updated_timestamp(): false|string {
-        $masterbranch = $this->get_masterbranch();
-        $branch = $this->get_branch($masterbranch);
+    #[\Override]
+    public function get_main_branch_last_updated_timestamp(): false|string {
+        $mainbranch = $this->get_mainbranch();
+        $branch = $this->get_branch($mainbranch);
         if (!$branch) {
             return false;
         }
@@ -109,24 +91,18 @@ final class gitlab_api extends gitprovider_api {
         return $branch->commit->created_at ?? false;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_files($branch = false): false|array {
+    #[\Override]
+    public function get_files(?string $branch = null): array|false {
 
         if (!$branch) {
-            $branch = $this->get_masterbranch();
+            $branch = $this->get_mainbranch();
         }
 
         if (!$branch) {
             return false;
         }
 
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/tree?ref=' . $branch;
-        $url .= '&per_page=100';
+        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/tree?ref=' . $branch . '&per_page=100']);
 
         $files = $this->get_data($url);
 
@@ -139,29 +115,21 @@ final class gitlab_api extends gitprovider_api {
         return $files;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_content($branch, $filepath): false|string {
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/files/' . $filepath;
-        $url .= '/raw?ref=' . $branch;
+    #[\Override]
+    public function get_file_content(string $branch, string $filepath): false|string {
+        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/files', $filepath, 'raw?ref=' . $branch]);
 
         return $this->get_data($url);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_file_last_commit($filepath): false|int {
-        $url = $this->get_url();
-        $url .= '/api/v4/projects/';
-        $url .= $this->get_project();
-        $url .= '/repository/files/' . $filepath;
-        $url .= '/blame?ref=';
-        $url .= $this->get_masterbranch();
+    #[\Override]
+    public function get_file_last_commit(string $filepath): false|int {
+        $url = $this->build_api_url([
+                'api/v4/projects',
+                $this->get_project(),
+                'repository/files', $filepath,
+                'blame?ref=' . $this->get_mainbranch(),
+        ]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);

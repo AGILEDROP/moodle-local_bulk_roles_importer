@@ -41,7 +41,6 @@ $PAGE->set_url(new moodle_url('/local/bulk_roles_importer/import_from_file.php')
 $PAGE->set_title($title);
 $PAGE->set_heading($title);
 
-echo $OUTPUT->header();
 
 $mform = new importfromfile_form();
 if ($mform->is_cancelled()) {
@@ -57,6 +56,7 @@ if ($mform->is_cancelled()) {
     echo '<h3 class="h3">' . get_string('import:runsuccesslogheader', 'local_bulk_roles_importer') . '</h3><div class="log">';
 
     $rolesimporter = new roles_importer('web');
+    $rolesimporter->set_import_filename($name);
     $rolesimporter->import_roles('file');
 
     echo '</div>';
@@ -64,7 +64,10 @@ if ($mform->is_cancelled()) {
         get_string('back'), 'get');
 
 } else {
+    echo $OUTPUT->header();
+
     $mform->display();
+
+    echo $OUTPUT->footer();
 }
 
-echo $OUTPUT->footer();

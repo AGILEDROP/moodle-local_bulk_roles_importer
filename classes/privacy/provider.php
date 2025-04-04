@@ -15,10 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strategy to import roles from GitLab repository.
- *
- * File         gitlab_roles_importer_strategy.php
- * Encoding     UTF-8
+ * Privacy Subsystem implementation for local_bulk_roles_importer.
  *
  * @package     local_bulk_roles_importer
  *
@@ -27,36 +24,28 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_bulk_roles_importer\util;
+namespace local_bulk_roles_importer\privacy;
+
+use core_privacy\local\metadata\null_provider;
 
 /**
- * Roles importing strategy for GitLab.
+ * Privacy Subsystem for bulk_roles_importer implementing null_provider.
+ *
+ * @package     local_bulk_roles_importer
+ *
+ * @copyright   Agiledrop, 2025
+ * @author      Agiledrop 2025 <hello@agiledrop.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class gitlab_roles_importer_strategy implements roles_importer_strategy_interface {
-
-    /** @var gitlab_api $gitlab Gitlab Api instance. */
-    private gitlab_api $gitlab;
+class provider implements null_provider {
 
     /**
-     * Constructor.
+     * Get the language string identifier with the component's language
+     * file to explain why this plugin stores no data.
+     *
+     * @return  string
      */
-    public function __construct() {
-        $this->gitlab = new gitlab_api();
+    public static function get_reason(): string {
+        return 'privacy:metadata';
     }
-
-    #[\Override]
-    public function get_name(): string {
-        return 'gitlab';
-    }
-
-    #[\Override]
-    public function get_last_updated(): int {
-        return $this->gitlab->get_main_branch_last_updated();
-    }
-
-    #[\Override]
-    public function get_roles(): array {
-        return $this->gitlab->get_roles();
-    }
-
 }

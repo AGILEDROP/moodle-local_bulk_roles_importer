@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Strategy to import roles from GitHub repository.
  *
@@ -28,6 +26,8 @@ namespace local_bulk_roles_importer\util;
  * @author      Agiledrop ltd. <developer@agiledrop.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace local_bulk_roles_importer\util;
 
 /**
  * Roles importing strategy for GitHub.
@@ -44,17 +44,18 @@ class github_roles_importer_strategy implements roles_importer_strategy_interfac
         $this->github = new github_api();
     }
 
-    public function get_name(): string
-    {
+    #[\Override]
+    public function get_name(): string {
         return 'github';
     }
 
+    #[\Override]
     public function get_last_updated(): int {
-        return $this->github->get_master_branch_last_updated();
+        return $this->github->get_main_branch_last_updated();
     }
 
+    #[\Override]
     public function get_roles(): array {
         return $this->github->get_roles();
     }
-
 }

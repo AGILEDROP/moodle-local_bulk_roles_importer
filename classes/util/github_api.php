@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
-
 /**
  * Utility class - GitHub API.
  *
@@ -29,6 +27,8 @@ namespace local_bulk_roles_importer\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\util;
+
 use CurlHandle;
 use local_bulk_roles_importer\util\gitprovider_api;
 
@@ -37,39 +37,29 @@ use local_bulk_roles_importer\util\gitprovider_api;
  */
 final class github_api extends gitprovider_api {
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_url(): void {
+    #[\Override]
+    public function set_url(): void {
         $this->url = get_config('local_bulk_roles_importer', 'githuburl');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_token(): void {
+    #[\Override]
+    public function set_token(): void {
         $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_project(): void {
+    #[\Override]
+    public function set_project(): void {
         $project = get_config('local_bulk_roles_importer', 'githubproject');
         $this->project = urlencode($project);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function set_masterbranch(): void {
-        $this->masterbranch = get_config('local_bulk_roles_importer', 'githubmaster');
+    #[\Override]
+    public function set_mainbranch(): void {
+        $this->mainbranch = get_config('local_bulk_roles_importer', 'githubmain');
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_curl($url): CurlHandle|false {
+    #[\Override]
+    public function get_curl(string $url): CurlHandle|false {
         $url = urldecode($url);
         $headers = [
             'Authorization: Bearer ' . $this->get_token(),
@@ -89,27 +79,16 @@ final class github_api extends gitprovider_api {
         return $handler;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_branches_url(): string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/branches';
+    #[\Override]
+    public function get_branches_url(): string {
+        $url = $this->build_api_url(['repos', $this->get_project(), 'branches']);
 
         return $url;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_master_branch_last_updated_timestamp(): false|string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/commits/';
-        $url .= $this->get_masterbranch();
+    #[\Override]
+    public function get_main_branch_last_updated_timestamp(): false|string {
+        $url = $this->build_api_url(['repos', $this->get_project(), 'commits', $this->get_mainbranch()]);
 
         $commit = $this->get_data($url);
         $commit = json_decode($commit);
@@ -117,22 +96,17 @@ final class github_api extends gitprovider_api {
         return $commit->commit->author->date ?? false;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function get_files($branch = false): false|array {
+    #[\Override]
+    public function get_files(?string $branch = null): array|false {
         if (!$branch) {
-            $branch = $this->get_masterbranch();
+            $branch = $this->get_mainbranch();
         }
 
         if (!$branch) {
             return false;
         }
 
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/git/trees/' . $branch;
+        $url = $this->build_api_url(['repos', $this->get_project(), 'git/trees', $branch]);
 
         $files = $this->get_data($url);
 
@@ -145,33 +119,24 @@ final class github_api extends gitprovider_api {
         return $files->tree;
     }
 
-    /**
-    /**
-     * {@inheritdoc}
-     */
-    public function get_file_content($branch, $filepath): false|string {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/contents/' . $filepath;
-        $url .= '?ref=' . $branch;
+    #[\Override]
+    public function get_file_content(string $branch, string $filepath): false|string {
+        $url = $this->build_api_url(['repos', $this->get_project(), 'contents', $filepath, '?ref=' . $branch]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);
-        $content_base46 = $json->content;
+        $contentbase46 = $json->content;
 
-        return base64_decode($content_base46);
+        return base64_decode($contentbase46);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final function get_file_last_commit($filepath): false|int {
-        $url = $this->get_url();
-        $url .= '/repos/';
-        $url .= $this->get_project();
-        $url .= '/commits?path=' . $filepath;
-        $url .= '&ref=' . $this->get_masterbranch();
+    #[\Override]
+    public function get_file_last_commit(string $filepath): false|int {
+        $url = $this->build_api_url([
+                'repos',
+                $this->get_project(),
+                'commits?path=' . $filepath . '&ref=' . $this->get_mainbranch(),
+        ]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);

@@ -26,29 +26,31 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-
 $string['form:description'] = 'Description';
 $string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
 $string['form:import'] = 'Import';
+
 $string['header:file'] = 'File';
 $string['header:fileinfo'] = 'Select file from which to import roles.';
 $string['header:github'] = 'Github';
 $string['header:githubinfo'] = 'Enter Github info data to import roles from repository.';
 $string['header:gitlab'] = 'Gitlab';
 $string['header:gitlabinfo'] = 'Enter Gitlab info data to import roles from repository.';
+
 $string['import:runsuccesslogheader'] = 'Import log';
+
 $string['label:filesource'] = 'Select file';
 $string['label:filesource_help'] = 'Select the file with role files to import.';
-$string['label:githubmaster'] = 'Master branch';
-$string['label:githubmaster_help'] = 'Enter Github master branch name.';
+$string['label:githubmain'] = 'Main branch';
+$string['label:githubmain_help'] = 'Enter Github main branch name.';
 $string['label:githubproject'] = 'Project';
 $string['label:githubproject_help'] = 'Enter Github project name.';
 $string['label:githubtoken'] = 'Auth token';
 $string['label:githubtoken_help'] = 'Enter Github auth token.';
 $string['label:githuburl'] = 'Github URL';
 $string['label:githuburl_help'] = 'Enter Github URL without slash at the end.';
-$string['label:gitlabmaster'] = 'Master branch';
-$string['label:gitlabmaster_help'] = 'Enter Gitlab master branch name.';
+$string['label:gitlabmain'] = 'Main branch';
+$string['label:gitlabmain_help'] = 'Enter Gitlab main branch name.';
 $string['label:gitlabproject'] = 'Project';
 $string['label:gitlabproject_help'] = 'Enter Gitlab project name.';
 $string['label:gitlabtoken'] = 'Auth token';
@@ -61,6 +63,10 @@ $string['label:scheduledtasksettings'] = 'Edit schedule';
 $string['label:scheduledtasksettingsdescription'] = 'Go to scheduled task settings.';
 $string['label:taskgitlabroles'] = 'Bulk Roles Importer - Import roles from GitLab.';
 $string['label:taskimportroles'] = 'Bulk Roles Importer - Import roles from selected source.';
+
 $string['pluginname'] = 'Bulk Roles Importer';
+
+$string['privacy:metadata'] = 'The Bulk Roles Importer plugin does not store any personal data.';
+
 $string['settings:pagetitlefile'] = 'Import roles from a file';
 $string['settings:pagetitlemain'] = 'Bulk roles importer settings';

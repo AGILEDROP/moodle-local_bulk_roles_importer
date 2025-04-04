@@ -1,22 +1,37 @@
 # Bulk Roles Importer #
 
-The Bulk Roles Importer plugin allows you to import multiple roles into Moodle
-from XML files, either manually or automatically, using a file upload or a
-connected repository.
+Bulk Roles Importer is a Moodle plugin that enables administrators to import multiple roles into Moodle.
+Role definitions are provided in XML format, and you can choose to either upload the files manually or
+configure an external repository for automatic updates.
+
+### Features ###
+-  **Manual Import:**
+Upload a single XML file or a ZIP archive containing multiple XML files with role definitions.
+
+- **Automatic Import:**
+Configure a repository (e.g. GitHub, GitLab, or a file-based repository) as the source for role XML files and schedule regular imports. The plugin will automatically fetch and update roles when changes are detected.
 
 ### Manual Import
 
-Navigate to _Site administration > Users > Permissions > Import roles from a 
-file_ to manually upload an XML file or a ZIP archive containing multiple XML
-files with Moodle role definitions. After uploading, click Import, and the
-plugin will process the files and display the results.
+Navigate to _Site administration > Users > Permissions > Import roles from a file_ to manually upload an XML file
+or a ZIP archive containing multiple XML files with Moodle role definitions. After uploading, click Import.
+The plugin will process each file and display the results. If a file is not in the correct XML format
+(i.e. the XML does not contain a <role> element),
+the plugin will log an error message with the file name and skip that file.
 
 ### Automatic Import
 
-In _Site administration > Users > Permissions > Bulk Roles Importer settings_,
-you can configure a repository as the source for role XML files and set a
-schedule for automatic imports. The plugin will periodically fetch the latest
-role definitions and apply them automatically.
+In _Site administration > Users > Permissions > Bulk Roles Importer settings_, you can configure a repository
+(for example, GitHub, GitLab) as the source for your role XML files.
+You can also set a schedule for automatic imports so that the plugin periodically checks the repository
+for updated role definitions and applies the changes automatically.
+Detailed logging is provided during the import process, including notifications of successful role creation,
+updates, and any errors encountered with specific files.
+
+### Example Role XML
+
+For your convenience, an example role XML file is provided in the `/samples` directory. This sample demonstrates
+a simplified role definition that includes only a few key permissions, making it easier to customize for your needs.
 
 ## Installing via uploaded ZIP file ##
 

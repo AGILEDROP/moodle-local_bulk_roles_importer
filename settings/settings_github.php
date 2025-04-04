@@ -35,8 +35,8 @@ $setting = new admin_setting_heading(
         new lang_string('header:github', 'local_bulk_roles_importer'),
         new lang_string('header:githubinfo', 'local_bulk_roles_importer'),
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/github_roles',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/github_roles',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'github');
@@ -48,8 +48,8 @@ $setting = new admin_setting_configtext(
         new lang_string('label:githuburl_help', 'local_bulk_roles_importer'),
         'https://api.github.com'
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/githuburl',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/githuburl',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'github');
@@ -61,8 +61,8 @@ $setting = new admin_setting_configpasswordunmask(
     new lang_string('label:githubtoken_help', 'local_bulk_roles_importer'),
     ''
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/githubtoken',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/githubtoken',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'github');
@@ -74,21 +74,21 @@ $setting = new admin_setting_configtext(
         new lang_string('label:githubproject_help', 'local_bulk_roles_importer'),
         'moodle/template-01/roles'
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/githubproject',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/githubproject',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'github');
 
-// GitHub - Master branch.
+// GitHub - Main branch.
 $setting = new admin_setting_configtext(
-    'local_bulk_roles_importer/githubmaster',
-    new lang_string('label:githubmaster', 'local_bulk_roles_importer'),
-    new lang_string('label:githubmaster_help', 'local_bulk_roles_importer'),
+    'local_bulk_roles_importer/githubmain',
+    new lang_string('label:githubmain', 'local_bulk_roles_importer'),
+    new lang_string('label:githubmain_help', 'local_bulk_roles_importer'),
     'main'
 );
-$settings_main->add($setting);
-$settings_main->hide_if('local_bulk_roles_importer/githubmaster',
+$settingsmain->add($setting);
+$settingsmain->hide_if('local_bulk_roles_importer/githubmain',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
     'github');
