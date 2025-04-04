@@ -39,25 +39,25 @@ use stdClass;
 abstract class gitprovider_api implements gitprovider_api_interface {
 
     /** @var string $url Url link to root of repositories. */
-    protected $url;
+    protected string $url;
 
     /** @var string $token Access token, generated in Git provider account settings. */
-    protected $token;
+    protected string $token;
 
     /** @var string $project Project name. */
-    protected $project;
+    protected string $project;
 
     /** @var string $mainbranch Main/master branch name. */
-    protected $mainbranch;
+    protected string $mainbranch;
 
     /** @var bool $error Has error. */
-    private $error;
+    private bool $error;
 
     /** @var int $errorcode Error code. */
-    private $errorcode;
+    private int $errorcode;
 
     /** @var string $errormessage Error message. */
-    private $errormessage;
+    private string $errormessage;
 
     /**
      * Construct method.
@@ -145,7 +145,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param bool $error
      * @return void
      */
-    protected function set_error($error): void {
+    protected function set_error(bool $error): void {
         $this->error = $error;
     }
 
@@ -164,7 +164,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param int $code Error code.
      * @return void
      */
-    protected function set_errorcode($code): void {
+    protected function set_errorcode(int $code): void {
         $this->errorcode = $code;
     }
 
@@ -183,7 +183,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @param string $message Error message.
      * @return void
      */
-    protected function set_errormessage($message): void {
+    protected function set_errormessage(string $message): void {
         $this->errormessage = $message;
     }
 
