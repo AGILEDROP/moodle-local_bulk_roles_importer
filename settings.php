@@ -45,7 +45,11 @@ if ($hassiteconfig) {
     if ($ADMIN->fulltree) {
         // Main settings page.
         require_once(__DIR__ . "/settings/settings_main.php");
-        require_once(__DIR__ . "/settings/settings_github.php");
-        require_once(__DIR__ . "/settings/settings_gitlab.php");
+
+        foreach (glob(__DIR__ . "/settings/settings_*.php") as $settingfile) {
+            if (basename($settingfile) !== 'settings_main.php') {
+                require_once($settingfile);
+            }
+        }
     }
 }

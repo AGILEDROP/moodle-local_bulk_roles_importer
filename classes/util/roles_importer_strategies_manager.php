@@ -36,6 +36,11 @@ class roles_importer_strategies_manager {
 
     /** @var array $rolesimporterstrategies Array of all roles importer strategies. */
     private static array $rolesimporterstrategies = [
+        'bitbucket' => [
+            'name' => 'Bitbucket',
+            'class' => '',
+            'automatic' => true,
+        ],
         'github' => [
             'name' => 'Github',
             'class' => github_roles_importer_strategy::class,

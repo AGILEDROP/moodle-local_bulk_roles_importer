@@ -30,6 +30,8 @@ $string['form:description'] = 'Description';
 $string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
 $string['form:import'] = 'Import';
 
+$string['header:bitbucket'] = 'Bitbucket';
+$string['header:bitbucketinfo'] = 'Enter Bitbucket info data to import roles from repository.';
 $string['header:file'] = 'File';
 $string['header:fileinfo'] = 'Select file from which to import roles.';
 $string['header:github'] = 'Github';
@@ -39,6 +41,14 @@ $string['header:gitlabinfo'] = 'Enter Gitlab info data to import roles from repo
 
 $string['import:runsuccesslogheader'] = 'Import log';
 
+$string['label:bitbucketmain'] = 'Main branch';
+$string['label:bitbucketmain_help'] = 'Enter Bitbucket main branch name.';
+$string['label:bitbucketproject'] = 'Project';
+$string['label:bitbucketproject_help'] = 'Enter Bitbucket project name.';
+$string['label:bitbuckettoken'] = 'Auth token';
+$string['label:bitbuckettoken_help'] = 'Enter Bitbucket auth token.';
+$string['label:bitbucketurl'] = 'Bitbucket URL';
+$string['label:bitbucketurl_help'] = 'Enter Bitbucket URL without slash at the end.';
 $string['label:filesource'] = 'Select file';
 $string['label:filesource_help'] = 'Select the file with role files to import.';
 $string['label:githubmain'] = 'Main branch';
