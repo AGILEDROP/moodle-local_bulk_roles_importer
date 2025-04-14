@@ -390,4 +390,15 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         }
         return $url;
     }
+
+    /**
+     * Allows each provider to modify the URL if needed.
+     * Default behavior is to return the URL as-is.
+     *
+     * @param string $url
+     * @return string
+     */
+    public function format_url(string $url): string {
+        return $url;
+    }
 }
