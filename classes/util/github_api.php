@@ -29,8 +29,7 @@
 
 namespace local_bulk_roles_importer\util;
 
-use CurlHandle;
-use local_bulk_roles_importer\util\gitprovider_api;
+use curl;
 
 /**
  * Definition class for GitHub API.
@@ -59,24 +58,16 @@ final class github_api extends gitprovider_api {
     }
 
     #[\Override]
-    public function get_curl(string $url): CurlHandle|false {
-        $url = urldecode($url);
+    public function get_curl(): curl|false {
         $headers = [
             'Authorization: Bearer ' . $this->get_token(),
             'Accept: application/vnd.github+json',
             'X-GitHub-Api-Version: 2022-11-28',
         ];
-        // Set request options.
-        $handler = curl_init($url);
-        curl_setopt($handler, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($handler, CURLOPT_USERAGENT, 'moodle-local_bulk_roles_importer');
-        curl_setopt($handler, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($handler, CURLOPT_POST, false);
-        curl_setopt($handler, CURLOPT_HTTPHEADER, array_values($headers));
-        curl_setopt($handler, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($handler, CURLOPT_TIMEOUT, 30);
+        $curl = new \curl();
+        $curl->setHeader($headers);
 
-        return $handler;
+        return $curl;
     }
 
     #[\Override]

@@ -29,15 +29,20 @@
 
 namespace local_bulk_roles_importer\util;
 
-use CurlHandle;
+defined('MOODLE_INTERNAL') || die();
+
 use dml_exception;
 use local_bulk_roles_importer\traits\role_file_processor;
 use stdClass;
+use curl;
+global $CFG;
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * Definition class for Git provider API.
  */
 abstract class gitprovider_api implements gitprovider_api_interface {
+
     use role_file_processor;
 
     /** @var string $url Url link to root of repositories. */
@@ -212,10 +217,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     /**
      * Get curl response from given url or false.
      *
-     * @param string $url Url.
-     * @return CurlHandle|false
+     * @return curl|false
      */
-    abstract protected function get_curl(string $url): CurlHandle|false;
+    abstract protected function get_curl(): curl|false;
 
     /**
      * Get json decoded response from given url or false.
@@ -224,25 +228,18 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return bool|string
      */
     protected function get_data(string $url): bool|string {
-        $handler = $this->get_curl($url);
+        $curl = $this->get_curl();
+        $data = $curl->get($url);
 
-        if ($handler === false) {
-            $this->set_error(true);
-            $this->set_errormessage('Failed to initialize cURL.');
-            return false;
-        }
-
-        $data = curl_exec($handler);
-        $json = json_decode($data);
-
-        $responsecode = curl_getinfo($handler, CURLINFO_HTTP_CODE);
+        $info = $curl->get_info();
+        $responsecode = $info['http_code'] ?? 0;
 
         if ($responsecode != 200) {
-            $message = $json->message ?? 'unknown error';
+            $json = json_decode($data);
+            $message = $json->message ?? get_string('error:unknown', 'local_bulk_roles_importer');
             $this->set_error(true);
             $this->set_errorcode($responsecode);
             $this->set_errormessage($message);
-
             return false;
         }
 

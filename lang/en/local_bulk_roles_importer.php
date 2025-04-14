@@ -26,6 +26,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['error:unknown'] = 'Unknown error';
+
 $string['form:description'] = 'Description';
 $string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
 $string['form:import'] = 'Import';

@@ -29,6 +29,7 @@
 
 namespace local_bulk_roles_importer\util;
 
+use curl;
 use CurlHandle;
 
 /**
@@ -58,20 +59,15 @@ final class gitlab_api extends gitprovider_api {
     }
 
     #[\Override]
-    public function get_curl(string $url): CurlHandle|false {
+    public function get_curl(): curl|false {
         $headers = [
             'PRIVATE-TOKEN: ' . $this->get_token(),
         ];
-        // Set request options.
-        $handler = curl_init($url);
-        curl_setopt($handler, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($handler, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($handler, CURLOPT_POST, false);
-        curl_setopt($handler, CURLOPT_HTTPHEADER, array_values($headers));
-        curl_setopt($handler, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($handler, CURLOPT_TIMEOUT, 30);
 
-        return $handler;
+        $curl = new \curl();
+        $curl->setHeader($headers);
+
+        return $curl;
     }
 
     #[\Override]
