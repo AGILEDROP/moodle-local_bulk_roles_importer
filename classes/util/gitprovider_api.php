@@ -29,13 +29,14 @@
 
 namespace local_bulk_roles_importer\util;
 
-use CurlHandle;
+defined('MOODLE_INTERNAL') || die();
+
 use dml_exception;
 use local_bulk_roles_importer\traits\role_file_processor;
 use stdClass;
 use curl;
 global $CFG;
-require_once ($CFG->libdir . '/filelib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * Definition class for Git provider API.
