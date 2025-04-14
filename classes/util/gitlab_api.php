@@ -139,4 +139,9 @@ final class gitlab_api extends gitprovider_api {
 
         return strtotime($date);
     }
+
+    #[\Override]
+    public function format_url(string $url): string {
+        return $url; // GitLab requires encoded slashes.
+    }
 }

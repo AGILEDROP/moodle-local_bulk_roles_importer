@@ -141,4 +141,9 @@ final class github_api extends gitprovider_api {
 
         return strtotime($date);
     }
+
+    #[\Override]
+    public function format_url(string $url): string {
+        return urldecode($url); // GitHub expects raw slashes.
+    }
 }
