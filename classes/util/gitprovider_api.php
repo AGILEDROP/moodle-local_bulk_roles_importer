@@ -229,6 +229,9 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      */
     protected function get_data(string $url): bool|string {
         $curl = $this->get_curl();
+
+        $url = $this->format_url($url);
+
         $data = $curl->get($url);
 
         $info = $curl->get_info();
