@@ -100,7 +100,7 @@ class roles_importer {
                 mtrace($message);
                 break;
             case 'web':
-                echo '<p class="message">' . $message . '</p>';
+                echo \html_writer::tag('p', $message, ['class' => 'message']);
                 break;
         }
     }
@@ -120,11 +120,11 @@ class roles_importer {
             $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         }
         if (!isset($this->rolesimportstrategies[$strategy]) || !class_exists($this->rolesimportstrategies[$strategy])) {
-            $this->log_message('ERROR - source: ' . $strategy . ' does not exist');
+            $this->log_message(get_string('error:strategy_does_not_exist', 'local_bulk_roles_importer', $strategy));
             return;
         }
 
-        $this->log_with_separators('  IMPORT ROLES FROM SOURCE: ' . $strategy, true, true);
+        $this->log_with_separators(get_string('log:import_roles', 'local_bulk_roles_importer', $strategy), true, true);
 
         $this->lastimport = $this->rolemanager->get_lastimport();
 
@@ -135,14 +135,14 @@ class roles_importer {
         $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
 
         if (!$this->lastchanges) {
-            $this->log_message('ERROR - cannot obtain main branch last updated time');
+            $this->log_message(get_string('error:main_branch_time', 'local_bulk_roles_importer'));
             return;
         }
 
         $roles = $this->rolesimportstrategy->get_roles();
 
         if (empty($roles)) {
-            $this->log_message('ERROR - cannot obtain roles');
+            $this->log_message(get_string('error:cannot_obtain_roles', 'local_bulk_roles_importer'));
             return;
         }
 
@@ -180,7 +180,7 @@ class roles_importer {
 
             if (!$this->is_valid_preset($role->xml)) {
                 $role->needupdate = false;
-                $this->log_with_separators('invalid XML', false, true);
+                $this->log_with_separators(get_string('error:invalid_xml', 'local_bulk_roles_importer'), false, true);
                 continue;
             }
             $moodlerole = $this->rolemanager->get_role($role->shortname);
@@ -192,7 +192,12 @@ class roles_importer {
             $role->needupdate = true;
             $this->rolemanager->create_role_from_xml($role->xml);
 
-            $this->log_with_separators('   -' . $role->shortname . ' [created]', false, true);
+            $this->log_with_separators(
+                '   ' . get_string('log:role_created',
+                'local_bulk_roles_importer', $role->shortname),
+                false,
+                true
+            );
         }
     }
 
@@ -206,7 +211,10 @@ class roles_importer {
         foreach ($roles as $role) {
             // If the role is marked as invalid, log a friendly error message.
             if (isset($role->invalid) && $role->invalid) {
-                $this->log_with_separators('   -incorrect format in file: ' . $role->filename, false, true);
+                $this->log_with_separators(
+                        get_string('error:incorrect_format_file', 'local_bulk_roles_importer', $role->filename),
+                        false,
+                        true);
                 continue;
             }
 
@@ -216,12 +224,12 @@ class roles_importer {
             } else {
                 $moodlerole = $this->rolemanager->get_role($role->shortname);
                 if (!$moodlerole) {
-                    $message .= ' [Role not found]';
+                    $message .= ' ' . get_string('log:role_not_found', 'local_bulk_roles_importer');
                 } else {
                     try {
                         $roleid = (int)$moodlerole->id;
                         $this->rolemanager->update_role_from_xml($roleid, $role->xml);
-                        $message .= ' [updated]';
+                        $message .= ' ' . get_string('log:updated', 'local_bulk_roles_importer');
                     } catch (\Throwable $e) {
                         // Log a friendly error message instead of a PHP error.
                         if ($role->filename) {
@@ -229,7 +237,7 @@ class roles_importer {
                         } else {
                             $filename = $this->importfilename;
                         }
-                        $message .= ' incorrect format in file: ' . $filename;
+                        $message .= ' ' . get_string('error:incorrect_format_file', 'local_bulk_roles_importer', $filename);
                     }
                 }
             }
