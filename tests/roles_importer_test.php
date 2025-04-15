@@ -32,8 +32,8 @@ namespace local_bulk_roles_importer;
 defined('MOODLE_INTERNAL') || die();
 
 use advanced_testcase;
-use local_bulk_roles_importer\util\role_manager;
-use local_bulk_roles_importer\util\roles_importer_strategy_interface;
+use local_bulk_roles_importer\local\util\role_manager;
+use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
 
 /**
  * Unit tests for roles_importer class.

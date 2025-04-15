@@ -27,9 +27,9 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_bulk_roles_importer\util;
+namespace local_bulk_roles_importer\local\util;
 
-use local_bulk_roles_importer\traits\role_file_processor;
+use local_bulk_roles_importer\local\traits\role_file_processor;
 use moodle_exception;
 use ZipArchive;
 

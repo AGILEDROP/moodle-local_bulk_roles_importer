@@ -30,8 +30,8 @@
 namespace local_bulk_roles_importer\task;
 
 use core\task\scheduled_task;
+use local_bulk_roles_importer\local\util\roles_importer_strategies_manager;
 use local_bulk_roles_importer\roles_importer;
-use local_bulk_roles_importer\util\roles_importer_strategies_manager;
 
 /**
  * Define scheduled task for check Moodle users for system roles.

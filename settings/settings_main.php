@@ -27,7 +27,7 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use local_bulk_roles_importer\util\roles_importer_strategies_manager;
+use local_bulk_roles_importer\local\util\roles_importer_strategies_manager;
 
 defined('MOODLE_INTERNAL') || die('moodle_internal not defined');
 

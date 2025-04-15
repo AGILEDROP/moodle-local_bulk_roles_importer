@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strategy to import roles from GitLab repository.
+ * Strategy to import roles from GitHub repository.
  *
- * File         gitlab_roles_importer_strategy.php
+ * File         github_roles_importer_strategy.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
@@ -27,36 +27,35 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_bulk_roles_importer\util;
+namespace local_bulk_roles_importer\local\util;
 
 /**
- * Roles importing strategy for GitLab.
+ * Roles importing strategy for GitHub.
  */
-class gitlab_roles_importer_strategy implements roles_importer_strategy_interface {
+class github_roles_importer_strategy implements roles_importer_strategy_interface {
 
-    /** @var gitlab_api $gitlab Gitlab Api instance. */
-    private gitlab_api $gitlab;
+    /** @var github_api $github GitHub Api instance. */
+    private github_api $github;
 
     /**
      * Constructor.
      */
     public function __construct() {
-        $this->gitlab = new gitlab_api();
+        $this->github = new github_api();
     }
 
     #[\Override]
     public function get_name(): string {
-        return 'gitlab';
+        return 'github';
     }
 
     #[\Override]
     public function get_last_updated(): int {
-        return $this->gitlab->get_main_branch_last_updated();
+        return $this->github->get_main_branch_last_updated();
     }
 
     #[\Override]
     public function get_roles(): array {
-        return $this->gitlab->get_roles();
+        return $this->github->get_roles();
     }
-
 }

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\util;
+namespace local_bulk_roles_importer\local\util;
 
 /**
  * Interface for roles importer strategies.

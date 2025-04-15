@@ -31,9 +31,9 @@ namespace local_bulk_roles_importer;
 
 use coding_exception;
 use dml_exception;
-use local_bulk_roles_importer\util\role_manager;
-use local_bulk_roles_importer\util\roles_importer_strategies_manager;
-use local_bulk_roles_importer\util\roles_importer_strategy_interface;
+use local_bulk_roles_importer\local\util\role_manager;
+use local_bulk_roles_importer\local\util\roles_importer_strategies_manager;
+use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
 
 /**
  * Roles importing strategy context.
