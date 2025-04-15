@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Utility class - GitHub API.
+ * Utility class - GitLab API.
  *
- * File         github_api.php
+ * File         gitlab_api.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
@@ -27,43 +27,42 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_bulk_roles_importer\util;
+namespace local_bulk_roles_importer\local\util;
 
 use curl;
 
 /**
- * Definition class for GitHub API.
+ * Definition class for Gitlab API.
  */
-final class github_api extends gitprovider_api {
+final class gitlab_api extends gitprovider_api {
 
     #[\Override]
     public function set_url(): void {
-        $this->url = $this->get_config_with_default('githuburl', 'https://api.github.com');
+        $this->url = $this->get_config_with_default('gitlaburl', 'https://gitlab.com');
     }
 
     #[\Override]
     public function set_token(): void {
-        $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
+        $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
     }
 
     #[\Override]
     public function set_project(): void {
-        $project = $this->get_config_with_default('githubproject', 'moodle/template-01/roles');
+        $project = $this->get_config_with_default('gitlabproject', 'moodle/template-01/roles');
         $this->project = urlencode($project);
     }
 
     #[\Override]
     public function set_mainbranch(): void {
-        $this->mainbranch = $this->get_config_with_default('githubmain', 'main');
+        $this->mainbranch = $this->get_config_with_default('gitlabmain', 'main');
     }
 
     #[\Override]
     public function get_curl(): curl|false {
         $headers = [
-            'Authorization: Bearer ' . $this->get_token(),
-            'Accept: application/vnd.github+json',
-            'X-GitHub-Api-Version: 2022-11-28',
+            'PRIVATE-TOKEN: ' . $this->get_token(),
         ];
+
         $curl = new \curl();
         $curl->setHeader($headers);
 
@@ -72,23 +71,24 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function get_branches_url(): string {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'branches']);
 
-        return $url;
+        return $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/branches']);
     }
 
     #[\Override]
     public function get_main_branch_last_updated_timestamp(): false|string {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'commits', $this->get_mainbranch()]);
+        $mainbranch = $this->get_mainbranch();
+        $branch = $this->get_branch($mainbranch);
+        if (!$branch) {
+            return false;
+        }
 
-        $commit = $this->get_data($url);
-        $commit = json_decode($commit);
-
-        return $commit->commit->author->date ?? false;
+        return $branch->commit->created_at ?? false;
     }
 
     #[\Override]
     public function get_files(?string $branch = null): array|false {
+
         if (!$branch) {
             $branch = $this->get_mainbranch();
         }
@@ -97,7 +97,7 @@ final class github_api extends gitprovider_api {
             return false;
         }
 
-        $url = $this->build_api_url(['repos', $this->get_project(), 'git/trees', $branch]);
+        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/tree?ref=' . $branch . '&per_page=100']);
 
         $files = $this->get_data($url);
 
@@ -107,33 +107,30 @@ final class github_api extends gitprovider_api {
 
         $files = json_decode($files);
 
-        return $files->tree;
+        return $files;
     }
 
     #[\Override]
     public function get_file_content(string $branch, string $filepath): false|string {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'contents', $filepath, '?ref=' . $branch]);
+        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/files', $filepath, 'raw?ref=' . $branch]);
 
-        $data = $this->get_data($url);
-        $json = json_decode($data);
-        $contentbase46 = $json->content;
-
-        return base64_decode($contentbase46);
+        return $this->get_data($url);
     }
 
     #[\Override]
     public function get_file_last_commit(string $filepath): false|int {
         $url = $this->build_api_url([
-                'repos',
+                'api/v4/projects',
                 $this->get_project(),
-                'commits?path=' . $filepath . '&ref=' . $this->get_mainbranch(),
+                'repository/files', $filepath,
+                'blame?ref=' . $this->get_mainbranch(),
         ]);
 
         $data = $this->get_data($url);
         $json = json_decode($data);
 
         $lastpart = end($json);
-        $date = $lastpart->commit->author->date ?? false;
+        $date = $lastpart->commit->committed_date ?? false;
 
         if (!$date) {
             return 0;
@@ -144,6 +141,6 @@ final class github_api extends gitprovider_api {
 
     #[\Override]
     public function format_url(string $url): string {
-        return urldecode($url); // GitHub expects raw slashes.
+        return $url; // GitLab requires encoded slashes.
     }
 }
