@@ -53,7 +53,7 @@ class import_roles extends scheduled_task {
     public function execute(): void {
         $strategy = get_config('local_bulk_roles_importer', 'roleretrievalsource');
         if (!roles_importer_strategies_manager::is_strategy_automatic($strategy)) {
-            mtrace('ERROR - source: ' . $strategy . ' is not automatic');
+            mtrace(get_string('error:strategy_not_automatic', 'local_bulk_roles_importer', $strategy));
             return;
         }
 

@@ -26,6 +26,13 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['error:cannot_obtain_roles'] = 'ERROR - cannot obtain roles';
+$string['error:incorrect_format_file'] = 'Incorrect format in file: {$a}';
+$string['error:invalid_file_format'] = 'Invalid file format. Must be an XML or a ZIP containing XML files.';
+$string['error:invalid_xml'] = 'invalid XML';
+$string['error:main_branch_time'] = 'ERROR - cannot obtain main branch last updated time';
+$string['error:strategy_does_not_exist'] = 'ERROR - source: {$a} does not exist';
+$string['error:strategy_not_automatic'] = 'ERROR - source: {$a} is not automatic';
 $string['error:unknown'] = 'Unknown error';
 
 $string['form:description'] = 'Description';
@@ -65,6 +72,11 @@ $string['label:scheduledtasksettings'] = 'Edit schedule';
 $string['label:scheduledtasksettingsdescription'] = 'Go to scheduled task settings.';
 $string['label:taskgitlabroles'] = 'Bulk Roles Importer - Import roles from GitLab.';
 $string['label:taskimportroles'] = 'Bulk Roles Importer - Import roles from selected source.';
+
+$string['log:import_roles'] = 'IMPORT ROLES FROM SOURCE: {$a}';
+$string['log:role_created'] = '- {$a} [created]';
+$string['log:role_not_found'] = '[Role not found]';
+$string['log:updated'] = '[updated]';
 
 $string['pluginname'] = 'Bulk Roles Importer';
 

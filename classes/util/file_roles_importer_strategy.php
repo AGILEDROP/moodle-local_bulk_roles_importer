@@ -76,7 +76,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
             $filepaths[] = $importfilepath;
         } else {
             unlink($importfilepath);
-            throw new moodle_exception('Invalid file format. Must be an XML or a ZIP containing XML files.');
+            throw new moodle_exception(get_string('error:invalid_file_format', 'local_bulk_roles_importer'));
         }
 
         // Process XML files.
