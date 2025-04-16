@@ -55,7 +55,7 @@ $string['label:githubmain_help'] = 'Enter Github main branch name.';
 $string['label:githubproject'] = 'Project';
 $string['label:githubproject_help'] = 'Enter Github project name.';
 $string['label:githubtoken'] = 'Auth token';
-$string['label:githubtoken_help'] = 'Enter your GitHub personal access token. This token is required to access private repositories via the GitHub API. 
+$string['label:githubtoken_help'] = 'Enter your GitHub personal access token. This token is required to access private repositories via the GitHub API.
 You can create one by following the instructions at https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens';
 $string['label:githuburl'] = 'Github URL';
 $string['label:githuburl_help'] = 'Enter Github URL without slash at the end.';
@@ -66,7 +66,8 @@ $string['label:gitlabproject_help'] = 'Enter Gitlab project name.';
 $string['label:gitlabtoken'] = 'Auth token';
 $string['label:gitlabtoken_help'] = 'Enter your GitLab personal or project access token. This token is required to access private repositories via the GitLab API.
 You can create a personal access token at https://docs.gitlab.com/user/profile/personal_access_tokens/#create-a-personal-access-token
-or a project access token at https://docs.gitlab.com/user/project/settings/project_access_tokens/#create-a-project-access-token';$string['label:gitlaburl'] = 'Gitlab URL';
+or a project access token at https://docs.gitlab.com/user/project/settings/project_access_tokens/#create-a-project-access-token';
+$string['label:gitlaburl'] = 'Gitlab URL';
 $string['label:gitlaburl_help'] = 'Enter Gitlab URL without slash at the end.';
 $string['label:rolesretrievalsource'] = 'Role import source';
 $string['label:rolesretrievalsourcedescription'] = 'From which source would you like to import roles.';
