@@ -155,10 +155,11 @@ class role_manager {
 
         // Update general role info.
         $name = $preset['name'] ?? '';
+        $shortname = $preset['shortname'] ?? '';
         $description = $preset['description'] ?? '';
         $archetype = $preset['archetype'] ?? '';
 
-        $this->update_role_info($roleid, $name, $description, $archetype);
+        $this->update_role_info($roleid, $name, $shortname, $description, $archetype);
 
         // Update context levels.
         $contextlevels = $preset['contextlevels'] ?? [];
@@ -185,13 +186,15 @@ class role_manager {
      *
      * @param int $roleid Moodle role id.
      * @param string $name Visible role name.
+     * @param string $shortname Role shortname.
      * @param string $description Role description.
      * @param string $archetype Role archetype.
      *
      * @return void
+     * @throws coding_exception
      * @throws dml_exception
      */
-    private function update_role_info(int $roleid, string $name, string $description, string $archetype): void {
+    private function update_role_info(int $roleid, string $name, string $shortname, string $description, string $archetype): void {
         global $DB;
 
         $conditions = [
@@ -202,6 +205,18 @@ class role_manager {
         ];
 
         $DB->update_record('role', $conditions);
+
+        \core\event\role_updated::create([
+                'objectid' => $roleid,
+                'context' => \context_system::instance(),
+                'other' => [
+                        'name' => $name,
+                        'shortname' => $shortname,
+                        'description' => $description,
+                        'archetype' => $archetype,
+                        'contextlevels' => get_role_contextlevels($roleid),
+                ]
+        ])->trigger();
     }
 
     /**
@@ -284,6 +299,14 @@ class role_manager {
                     $keyname => $currentallow,
                 ];
                 $DB->delete_records($tablename, $conditions);
+
+                // Trigger event for removed role allowance.
+                $eventclass = "\\core\\event\\role_allow_{$allowtype}_updated";
+                $eventclass::create([
+                        'context' => \context_system::instance(),
+                        'objectid' => $roleid,
+                        'other' => ['targetroleid' => $currentallow, 'allow' => false]
+                ])->trigger();
             }
         }
 
@@ -298,6 +321,14 @@ class role_manager {
             }
 
             $DB->insert_record($tablename, $conditions);
+
+            // Trigger event for added role allowance.
+            $eventclass = "\\core\\event\\role_allow_{$allowtype}_updated";
+            $eventclass::create([
+                    'context' => \context_system::instance(),
+                    'objectid' => $roleid,
+                    'other' => ['targetroleid' => $permission, 'allow' => true]
+            ])->trigger();
         }
     }
 
