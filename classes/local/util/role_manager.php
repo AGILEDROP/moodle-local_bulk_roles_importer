@@ -215,7 +215,7 @@ class role_manager {
                         'description' => $description,
                         'archetype' => $archetype,
                         'contextlevels' => get_role_contextlevels($roleid),
-                ]
+                ],
         ])->trigger();
     }
 
@@ -305,7 +305,7 @@ class role_manager {
                 $eventclass::create([
                         'context' => \context_system::instance(),
                         'objectid' => $roleid,
-                        'other' => ['targetroleid' => $currentallow, 'allow' => false]
+                        'other' => ['targetroleid' => $currentallow, 'allow' => false],
                 ])->trigger();
             }
         }
@@ -327,7 +327,7 @@ class role_manager {
             $eventclass::create([
                     'context' => \context_system::instance(),
                     'objectid' => $roleid,
-                    'other' => ['targetroleid' => $permission, 'allow' => true]
+                    'other' => ['targetroleid' => $permission, 'allow' => true],
             ])->trigger();
         }
     }
