@@ -1,8 +1,10 @@
 # Bulk Roles Importer #
 
-Bulk Roles Importer is a Moodle plugin that enables administrators to import multiple roles into Moodle.
-Role definitions are provided in XML format, and you can choose to either upload the files manually or
-configure an external repository for automatic updates.
+Bulk Roles Importer is a Moodle plugin that enables administrators to import and manage multiple roles in bulk using XML role presets.
+Role definitions can be uploaded manually or synced automatically from a Git-based repository (e.g. GitHub, GitLab).
+
+This plugin is ideal for Moodle sites managing many custom roles across multiple environments or needing regular synchronization
+with a version-controlled repository.
 
 ### Features ###
 -  **Manual Import:**
@@ -11,6 +13,20 @@ Upload a single XML file or a ZIP archive containing multiple XML files with rol
 - **Automatic Import:**
 Configure a repository (e.g. GitHub, GitLab) as the source for role XML files and define a schedule for periodic imports.
 At each scheduled time, the plugin will fetch the latest role definitions and update Moodle roles accordingly.
+
+### Why is an access token required?
+
+To fetch role definitions from private or rate-limited Git repositories, an authentication token is required:
+
+- **GitHub Token**  
+  Needed for authenticating API requests to access repository contents.  
+  → [Create a GitHub personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+
+- **GitLab Token**  
+  Used for accessing protected resources via GitLab’s API.  
+  → [Create a GitLab project access token](https://docs.gitlab.com/user/project/settings/project_access_tokens/#create-a-project-access-token)
+
+Paste the generated token into the corresponding field in the plugin settings.
 
 ### Manual Import
 
@@ -28,6 +44,11 @@ You can also set a schedule for automatic imports so that the plugin periodicall
 for updated role definitions and applies the changes automatically.
 Detailed logging is provided during the import process, including notifications of successful role creation,
 updates, and any errors encountered with specific files.
+
+### Logging & Validation
+
+- Full logs available after each import via CLI or the web interface.
+- Files with invalid XML structure or unsupported content are skipped and logged.
 
 ### Example Role XML
 
