@@ -31,28 +31,32 @@ defined('MOODLE_INTERNAL') || die('moodle_internal not defined');
 
 // Header - GitHub.
 $setting = new admin_setting_heading(
-        'local_bulk_roles_importer/github_roles',
-        new lang_string('header:github', 'local_bulk_roles_importer'),
-        new lang_string('header:githubinfo', 'local_bulk_roles_importer'),
+    'local_bulk_roles_importer/github_roles',
+    new lang_string('header:github', 'local_bulk_roles_importer'),
+    new lang_string('header:githubinfo', 'local_bulk_roles_importer'),
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/github_roles',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/github_roles',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'github');
+    'github'
+);
 
 // GitHub - Url.
 $setting = new admin_setting_configtext(
-        'local_bulk_roles_importer/githuburl',
-        new lang_string('label:githuburl', 'local_bulk_roles_importer'),
-        new lang_string('label:githuburl_help', 'local_bulk_roles_importer'),
-        'https://api.github.com'
+    'local_bulk_roles_importer/githuburl',
+    new lang_string('label:githuburl', 'local_bulk_roles_importer'),
+    new lang_string('label:githuburl_help', 'local_bulk_roles_importer'),
+    'https://api.github.com'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/githuburl',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/githuburl',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'github');
+    'github'
+);
 
 // GitHub - Auth token.
 $setting = new admin_setting_configpasswordunmask(
@@ -62,23 +66,27 @@ $setting = new admin_setting_configpasswordunmask(
     ''
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/githubtoken',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/githubtoken',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'github');
+    'github'
+);
 
 // GitHub - Project id.
 $setting = new admin_setting_configtext(
-        'local_bulk_roles_importer/githubproject',
-        new lang_string('label:githubproject', 'local_bulk_roles_importer'),
-        new lang_string('label:githubproject_help', 'local_bulk_roles_importer'),
-        'moodle/template-01/roles'
+    'local_bulk_roles_importer/githubproject',
+    new lang_string('label:githubproject', 'local_bulk_roles_importer'),
+    new lang_string('label:githubproject_help', 'local_bulk_roles_importer'),
+    'moodle/template-01/roles'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/githubproject',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/githubproject',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'github');
+    'github'
+);
 
 // GitHub - Main branch.
 $setting = new admin_setting_configtext(
@@ -88,7 +96,9 @@ $setting = new admin_setting_configtext(
     'main'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/githubmain',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/githubmain',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'github');
+    'github'
+);

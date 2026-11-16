@@ -35,7 +35,6 @@ use curl;
  * Definition class for GitHub API.
  */
 final class github_api extends gitprovider_api {
-
     #[\Override]
     public function set_url(): void {
         $this->url = $this->get_config_with_default('githuburl', 'https://api.github.com');

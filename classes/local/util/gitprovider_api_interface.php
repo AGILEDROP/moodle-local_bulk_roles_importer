@@ -35,7 +35,6 @@ use stdClass;
  * Definition class for Git provider API.
  */
 interface gitprovider_api_interface {
-
     /**
      * Get selected branch info or false.
      *

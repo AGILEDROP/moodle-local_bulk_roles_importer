@@ -37,7 +37,6 @@ use local_bulk_roles_importer\roles_importer;
  * Define scheduled task for check Moodle users for system roles.
  */
 class import_roles extends scheduled_task {
-
     /**
      * Get task name.
      */

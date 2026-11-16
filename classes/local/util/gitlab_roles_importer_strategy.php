@@ -33,7 +33,6 @@ namespace local_bulk_roles_importer\local\util;
  * Roles importing strategy for GitLab.
  */
 class gitlab_roles_importer_strategy implements roles_importer_strategy_interface {
-
     /** @var gitlab_api $gitlab Gitlab Api instance. */
     private gitlab_api $gitlab;
 
@@ -58,5 +57,4 @@ class gitlab_roles_importer_strategy implements roles_importer_strategy_interfac
     public function get_roles(): array {
         return $this->gitlab->get_roles();
     }
-
 }

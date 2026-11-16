@@ -28,7 +28,7 @@ use local_bulk_roles_importer\form\importfromfile_form;
 use local_bulk_roles_importer\roles_importer;
 
 require_once(__DIR__ . '/../../config.php');
-require_once($CFG->libdir.'/adminlib.php');
+require_once($CFG->libdir . '/adminlib.php');
 
 // Check permissions.
 require_login(null, false);
@@ -45,7 +45,6 @@ $PAGE->set_heading($title);
 $mform = new importfromfile_form();
 if ($mform->is_cancelled()) {
     redirect('/admin/search.php#linkusers');
-
 } else if ($fromform = $mform->get_data()) {
     $content = $mform->get_file_content('userfile');
     $name = $mform->get_new_filename('userfile');
@@ -60,9 +59,11 @@ if ($mform->is_cancelled()) {
     $rolesimporter->import_roles('file');
 
     echo '</div>';
-    echo $OUTPUT->single_button(new moodle_url('/local/bulk_roles_importer/import_from_file.php'),
-        get_string('back'), 'get');
-
+    echo $OUTPUT->single_button(
+        new moodle_url('/local/bulk_roles_importer/import_from_file.php'),
+        get_string('back'),
+        'get'
+    );
 } else {
     echo $OUTPUT->header();
 
@@ -70,4 +71,3 @@ if ($mform->is_cancelled()) {
 
     echo $OUTPUT->footer();
 }
-

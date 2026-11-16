@@ -37,7 +37,6 @@ require_once("$CFG->libdir/formslib.php");
  * Class importfromfile_form
  */
 class importfromfile_form extends moodleform {
-
     /**
      * Add elements to form.
      *

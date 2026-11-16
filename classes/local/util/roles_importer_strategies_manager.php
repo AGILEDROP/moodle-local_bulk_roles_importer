@@ -33,7 +33,6 @@ namespace local_bulk_roles_importer\local\util;
  * Roles importer strategies manager.
  */
 class roles_importer_strategies_manager {
-
     /** @var array $rolesimporterstrategies Array of all roles importer strategies. */
     private static array $rolesimporterstrategies = [
         'github' => [
@@ -59,7 +58,7 @@ class roles_importer_strategies_manager {
      * @return array
      */
     public static function get_strategies_names(): array {
-        $mapfunction = function($value) {
+        $mapfunction = function ($value) {
             return $value['name'];
         };
         return array_map($mapfunction, self::$rolesimporterstrategies);
@@ -71,10 +70,10 @@ class roles_importer_strategies_manager {
      * @return array
      */
     public static function get_automatic_strategies_names(): array {
-        $filterfunction = function($value) {
+        $filterfunction = function ($value) {
             return $value['automatic'];
         };
-        $mapfunction = function($value) {
+        $mapfunction = function ($value) {
             return $value['name'];
         };
         $filteredarray = array_filter(self::$rolesimporterstrategies, $filterfunction);
@@ -87,7 +86,7 @@ class roles_importer_strategies_manager {
      * @return array
      */
     public static function get_strategies_classes(): array {
-        $mapfunction = function($value) {
+        $mapfunction = function ($value) {
             return $value['class'];
         };
         return array_map($mapfunction, self::$rolesimporterstrategies);
@@ -103,5 +102,4 @@ class roles_importer_strategies_manager {
         $isautomatic = self::$rolesimporterstrategies[$strategy]['automatic'] ?? false;
         return $isautomatic;
     }
-
 }

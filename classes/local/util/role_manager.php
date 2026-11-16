@@ -288,7 +288,13 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    protected function update_role_info(int $roleid, string $name, string $shortname, string $description, string $archetype): void {
+    protected function update_role_info(
+        int $roleid,
+        string $name,
+        string $shortname,
+        string $description,
+        string $archetype
+    ): void {
         global $DB;
 
         $conditions = [

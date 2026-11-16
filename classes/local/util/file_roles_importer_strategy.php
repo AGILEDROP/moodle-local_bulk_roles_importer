@@ -38,6 +38,7 @@ use ZipArchive;
  */
 class file_roles_importer_strategy implements roles_importer_strategy_interface {
     use role_file_processor;
+
     /**
      * @var bool $iszip True if the file is a zip file.
      */
@@ -61,7 +62,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
         $filepaths = [];
 
         // Prepare files.
-        $zip = new ZipArchive;
+        $zip = new ZipArchive();
         if ($zip->open($importfilepath) === true) {
             $this->iszip = true;
 

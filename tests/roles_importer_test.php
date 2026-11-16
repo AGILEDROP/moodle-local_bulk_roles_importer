@@ -35,6 +35,8 @@ use advanced_testcase;
 use local_bulk_roles_importer\local\util\role_manager;
 use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
 
+require_once(__DIR__ . '/fixtures/testable_roles_importer.php');
+
 /**
  * Unit tests for roles_importer class.
  *
@@ -432,45 +434,5 @@ final class roles_importer_test extends advanced_testcase {
         $output = ob_get_clean();
 
         $this->assertStringContainsString('ERROR - cannot obtain roles', $output);
-    }
-}
-
-/**
- * Testable subclass of roles_importer used for mocking strategy instance.
- *
- * @package     local_bulk_roles_importer
- */
-class testable_roles_importer extends roles_importer {
-    /** @var roles_importer_strategy_interface */
-    private roles_importer_strategy_interface $mockstrategy;
-
-    /**
-     * Set a mock strategy to be used instead of real instantiation.
-     *
-     * @param roles_importer_strategy_interface $strategy
-     * @return void
-     */
-    public function set_mock_strategy(roles_importer_strategy_interface $strategy): void {
-        $this->mockstrategy = $strategy;
-    }
-
-    /**
-     * Override strategy instantiation to return a mocked strategy.
-     *
-     * @param string $strategyclass
-     * @return roles_importer_strategy_interface
-     */
-    protected function make_strategy_instance(string $strategyclass): roles_importer_strategy_interface {
-        return $this->mockstrategy;
-    }
-
-    /**
-     * Override role preset validation.
-     *
-     * @param string $xml
-     * @return bool
-     */
-    protected function is_valid_preset(string $xml): bool {
-        return true; // Always return true for tests.
     }
 }

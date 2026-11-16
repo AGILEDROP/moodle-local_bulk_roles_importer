@@ -43,7 +43,6 @@ require_once($CFG->libdir . '/filelib.php');
  * Definition class for Git provider API.
  */
 abstract class gitprovider_api implements gitprovider_api_interface {
-
     use role_file_processor;
 
     /** @var string $url Url link to root of repositories. */

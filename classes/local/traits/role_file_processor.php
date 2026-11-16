@@ -35,7 +35,6 @@ use stdClass;
  * Trait for role file processing.
  */
 trait role_file_processor {
-
     /**
      * Process a role XML string.
      *

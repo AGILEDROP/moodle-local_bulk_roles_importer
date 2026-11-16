@@ -33,7 +33,6 @@ namespace local_bulk_roles_importer\local\util;
  * Roles importing strategy interface.
  */
 interface roles_importer_strategy_interface {
-
     /**
      * Returns the name of the strategy.
      *
@@ -54,5 +53,4 @@ interface roles_importer_strategy_interface {
      * @return array
      */
     public function get_roles(): array;
-
 }

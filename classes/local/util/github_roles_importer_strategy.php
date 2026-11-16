@@ -33,7 +33,6 @@ namespace local_bulk_roles_importer\local\util;
  * Roles importing strategy for GitHub.
  */
 class github_roles_importer_strategy implements roles_importer_strategy_interface {
-
     /** @var github_api $github GitHub Api instance. */
     private github_api $github;
 

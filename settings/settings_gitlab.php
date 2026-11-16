@@ -31,28 +31,32 @@ defined('MOODLE_INTERNAL') || die('moodle_internal not defined');
 
 // Header - GitLab.
 $setting = new admin_setting_heading(
-        'local_bulk_roles_importer/gitlab_roles',
-        new lang_string('header:gitlab', 'local_bulk_roles_importer'),
-        new lang_string('header:gitlabinfo', 'local_bulk_roles_importer'),
+    'local_bulk_roles_importer/gitlab_roles',
+    new lang_string('header:gitlab', 'local_bulk_roles_importer'),
+    new lang_string('header:gitlabinfo', 'local_bulk_roles_importer'),
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/gitlab_roles',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/gitlab_roles',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'gitlab');
+    'gitlab'
+);
 
 // GitLab - Url.
 $setting = new admin_setting_configtext(
-        'local_bulk_roles_importer/gitlaburl',
-        new lang_string('label:gitlaburl', 'local_bulk_roles_importer'),
-        new lang_string('label:gitlaburl_help', 'local_bulk_roles_importer'),
-        'https://gitlab.com'
+    'local_bulk_roles_importer/gitlaburl',
+    new lang_string('label:gitlaburl', 'local_bulk_roles_importer'),
+    new lang_string('label:gitlaburl_help', 'local_bulk_roles_importer'),
+    'https://gitlab.com'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/gitlaburl',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/gitlaburl',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'gitlab');
+    'gitlab'
+);
 
 // GitLab - Auth token.
 $setting = new admin_setting_configpasswordunmask(
@@ -62,23 +66,27 @@ $setting = new admin_setting_configpasswordunmask(
     ''
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/gitlabtoken',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/gitlabtoken',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'gitlab');
+    'gitlab'
+);
 
 // GitLab - Project id.
 $setting = new admin_setting_configtext(
-        'local_bulk_roles_importer/gitlabproject',
-        new lang_string('label:gitlabproject', 'local_bulk_roles_importer'),
-        new lang_string('label:gitlabproject_help', 'local_bulk_roles_importer'),
-        'moodle/template-01/roles'
+    'local_bulk_roles_importer/gitlabproject',
+    new lang_string('label:gitlabproject', 'local_bulk_roles_importer'),
+    new lang_string('label:gitlabproject_help', 'local_bulk_roles_importer'),
+    'moodle/template-01/roles'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/gitlabproject',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/gitlabproject',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'gitlab');
+    'gitlab'
+);
 
 // GitLab - Main branch.
 $setting = new admin_setting_configtext(
@@ -88,7 +96,9 @@ $setting = new admin_setting_configtext(
     'main'
 );
 $settingsmain->add($setting);
-$settingsmain->hide_if('local_bulk_roles_importer/gitlabmain',
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/gitlabmain',
     'local_bulk_roles_importer/roleretrievalsource',
     'neq',
-    'gitlab');
+    'gitlab'
+);
