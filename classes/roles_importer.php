@@ -39,7 +39,6 @@ use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
  * Roles importing strategy context.
  */
 class roles_importer {
-
     /** @var role_manager $rolemanager Role manager instance. */
     private role_manager $rolemanager;
 
@@ -70,6 +69,9 @@ class roles_importer {
     /** @var string|null $importfilename Name of the import file. */
     private ?string $importfilename = null;
 
+    /** @var bool $hasfailures Whether any role failed during the current import. */
+    private bool $hasfailures = false;
+
 
     /**
      * Constructor.
@@ -79,9 +81,9 @@ class roles_importer {
      * @param array|null $rolesimportstrategies
      */
     public function __construct(
-            string $loggingstyle = 'task',
-            ?role_manager $rolemanager = null,
-            ?array $rolesimportstrategies = null
+        string $loggingstyle = 'task',
+        ?role_manager $rolemanager = null,
+        ?array $rolesimportstrategies = null
     ) {
         $this->rolemanager = $rolemanager ?? new role_manager();
         $this->rolesimportstrategies = $rolesimportstrategies ?: roles_importer_strategies_manager::get_strategies_classes();
@@ -100,7 +102,7 @@ class roles_importer {
                 mtrace($message);
                 break;
             case 'web':
-                echo \html_writer::tag('p', $message, ['class' => 'message']);
+                echo \html_writer::tag('p', s($message), ['class' => 'message']);
                 break;
         }
     }
@@ -152,17 +154,25 @@ class roles_importer {
     /**
      * Process import roles.
      *
+     * Pass one creates missing roles and decides which existing roles need updating.
+     * Pass two updates existing roles and links allow lists of newly created roles,
+     * so roles in the same batch can reference each other. The last import time is
+     * only advanced when no role failed, so failed roles are retried next run.
+     *
      * @param array $roles Array of roles.
      * @return void
      * @throws coding_exception
      * @throws dml_exception
      */
     private function process_import(array $roles): void {
+        $this->hasfailures = false;
 
         $this->process_new_roles($roles);
         $this->process_updated_roles($roles);
 
-        $this->rolemanager->mark_last_import_success();
+        if (!$this->hasfailures) {
+            $this->rolemanager->mark_last_import_success();
+        }
     }
 
     /**
@@ -174,35 +184,59 @@ class roles_importer {
     private function process_new_roles(array $roles): void {
         foreach ($roles as $role) {
             // If the role is marked as invalid, skip it.
-            if (isset($role->invalid) && $role->invalid) {
+            if (!empty($role->invalid)) {
+                $this->hasfailures = true;
                 continue;
             }
 
             if (!$this->is_valid_preset($role->xml)) {
+                $this->hasfailures = true;
                 $role->needupdate = false;
+                $role->skipped = true;
                 $this->log_with_separators(get_string('error:invalid_xml', 'local_bulk_roles_importer'), false, true);
                 continue;
             }
-            $moodlerole = $this->rolemanager->get_role($role->shortname);
+
+            // An empty <shortname/> element is decoded as an array, so accept strings only.
+            $rawshortname = is_string($role->shortname ?? null) ? $role->shortname : '';
+            $shortname = role_manager::normalise_shortname($rawshortname);
+            if ($shortname === '' || \core_text::strlen($shortname) > 100) {
+                $this->hasfailures = true;
+                $role->needupdate = false;
+                $role->skipped = true;
+                $this->log_with_separators(
+                    get_string('error:invalid_shortname', 'local_bulk_roles_importer', $rawshortname),
+                    false,
+                    true
+                );
+                continue;
+            }
+            $role->shortname = $shortname;
+
+            $moodlerole = $this->rolemanager->get_role($shortname);
             if ($moodlerole) {
                 $lastchange = $role->lastchange ?? 0;
                 $role->needupdate = ($lastchange > $this->lastimport);
                 continue;
             }
-            $role->needupdate = true;
-            $this->rolemanager->create_role_from_xml($role->xml);
 
-            $this->log_with_separators(
-                '   ' . get_string('log:role_created',
-                'local_bulk_roles_importer', $role->shortname),
-                false,
-                true
-            );
+            // New roles are fully written here; pass two only links their allow lists.
+            $role->needupdate = false;
+            try {
+                $this->rolemanager->create_role_from_xml($role->xml);
+                $role->created = true;
+                $message = '   ' . get_string('log:role_created', 'local_bulk_roles_importer', $shortname);
+            } catch (\Throwable $e) {
+                $role->skipped = true;
+                $this->hasfailures = true;
+                $message = '   ' . $this->get_failure_message($shortname, $e);
+            }
+            $this->log_with_separators($message, false, true);
         }
     }
 
     /**
-     * Process updates for existing roles.
+     * Process updates for existing roles and link allow lists of new roles.
      *
      * @param array $roles
      * @return void
@@ -210,40 +244,62 @@ class roles_importer {
     private function process_updated_roles(array $roles): void {
         foreach ($roles as $role) {
             // If the role is marked as invalid, log a friendly error message.
-            if (isset($role->invalid) && $role->invalid) {
+            if (!empty($role->invalid)) {
                 $this->log_with_separators(
-                        get_string('error:incorrect_format_file', 'local_bulk_roles_importer', $role->filename),
-                        false,
-                        true);
+                    get_string('error:incorrect_format_file', 'local_bulk_roles_importer', $role->filename),
+                    false,
+                    true
+                );
                 continue;
             }
 
+            // Already reported in the first pass.
+            if (!empty($role->skipped)) {
+                continue;
+            }
+
+            $created = !empty($role->created);
             $message = '   -' . $role->shortname;
-            if (empty($role->needupdate)) {
+            if (!$created && empty($role->needupdate)) {
                 $message .= ' [X]';
             } else {
                 $moodlerole = $this->rolemanager->get_role($role->shortname);
                 if (!$moodlerole) {
+                    $this->hasfailures = true;
                     $message .= ' ' . get_string('log:role_not_found', 'local_bulk_roles_importer');
                 } else {
+                    $roleid = (int)$moodlerole->id;
                     try {
-                        $roleid = (int)$moodlerole->id;
-                        $this->rolemanager->update_role_from_xml($roleid, $role->xml);
-                        $message .= ' ' . get_string('log:updated', 'local_bulk_roles_importer');
-                    } catch (\Throwable $e) {
-                        // Log a friendly error message instead of a PHP error.
-                        if ($role->filename) {
-                            $filename = $role->filename;
+                        if ($created) {
+                            $this->rolemanager->update_role_allows_from_xml($roleid, $role->xml);
+                            $message .= ' ' . get_string('log:allows_linked', 'local_bulk_roles_importer');
                         } else {
-                            $filename = $this->importfilename;
+                            $this->rolemanager->update_role_from_xml($roleid, $role->xml);
+                            $message .= ' ' . get_string('log:updated', 'local_bulk_roles_importer');
                         }
-                        $message .= ' ' . get_string('error:incorrect_format_file', 'local_bulk_roles_importer', $filename);
+                    } catch (\Throwable $e) {
+                        $this->hasfailures = true;
+                        $message = '   ' . $this->get_failure_message($role->shortname, $e);
                     }
                 }
             }
 
             $this->log_with_separators($message, false, true);
         }
+    }
+
+    /**
+     * Build a log message for a role that failed to import.
+     *
+     * @param string $shortname Role shortname.
+     * @param \Throwable $e Failure.
+     * @return string
+     */
+    private function get_failure_message(string $shortname, \Throwable $e): string {
+        return get_string('error:role_import_failed', 'local_bulk_roles_importer', (object)[
+            'shortname' => $shortname,
+            'error' => $e->getMessage(),
+        ]);
     }
 
     /**

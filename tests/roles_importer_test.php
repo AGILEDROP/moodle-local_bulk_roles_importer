@@ -43,7 +43,6 @@ use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class roles_importer_test extends advanced_testcase {
-
     /**
      * Reset Moodle after each test.
      *
@@ -64,15 +63,25 @@ final class roles_importer_test extends advanced_testcase {
         $rolemanager = $this->createMock(role_manager::class);
 
         $rolemanager->method('get_lastimport')->willReturn(1000);
-        $rolemanager->method('get_role')->willReturnCallback(function($shortname) {
+        $created = false;
+        $rolemanager->method('get_role')->willReturnCallback(function ($shortname) use (&$created) {
             if ($shortname === 'existingrole') {
                 return (object)['id' => 1, 'shortname' => 'existingrole'];
+            }
+            if ($shortname === 'newrole' && $created) {
+                return (object)['id' => 2, 'shortname' => 'newrole'];
             }
             return false;
         });
 
-        $rolemanager->expects($this->once())->method('create_role_from_xml');
-        $rolemanager->expects($this->once())->method('update_role_from_xml');
+        $rolemanager->expects($this->once())->method('create_role_from_xml')
+            ->willReturnCallback(function () use (&$created): int {
+                $created = true;
+                return 2;
+            });
+        // Existing role gets a full update; the new role only gets its allow lists linked.
+        $rolemanager->expects($this->once())->method('update_role_from_xml')->with(1, $this->anything());
+        $rolemanager->expects($this->once())->method('update_role_allows_from_xml')->with(2, $this->anything());
         $rolemanager->expects($this->once())->method('mark_last_import_success');
 
         // Mock strategy.
@@ -102,10 +111,109 @@ final class roles_importer_test extends advanced_testcase {
         $rolesimporter->import_roles('mock');
         $output = ob_get_clean();
 
-        $this->assertTrue($newrole->needupdate, 'New role should be marked as needing update');
+        $this->assertTrue($newrole->created, 'New role should be marked as created');
+        $this->assertFalse($newrole->needupdate, 'New role should not get a second full write');
         $this->assertTrue($existingrole->needupdate, 'Existing role should be marked as needing update');
         $this->assertStringContainsString('newrole [created]', $output);
         $this->assertStringContainsString('existingrole [updated]', $output);
+        $this->assertStringContainsString('newrole [created, allow lists linked]', $output);
+    }
+
+    /**
+     * Lookup, creation, and linking agree on Moodle's preset shortname.
+     */
+    public function test_import_roles_normalises_accented_shortname(): void {
+        global $DB;
+
+        $role = (object)[
+            'xml' => '<role><shortname>Učitelj</shortname><allowassign><shortname>uitelj</shortname></allowassign></role>',
+            'shortname' => 'Učitelj',
+        ];
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([$role]);
+        $rolesimporter = new testable_roles_importer('task', new role_manager(), ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'uitelj'], MUST_EXIST);
+        $this->assertTrue($DB->record_exists('role_allow_assign', ['roleid' => $roleid, 'allowassign' => $roleid]));
+        $this->assertStringContainsString('uitelj [created, allow lists linked]', $output);
+    }
+
+    /**
+     * Test that a failed role update is reported and blocks the last import timestamp.
+     *
+     * @return void
+     */
+    public function test_import_roles_failed_update_is_reported_and_retried(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(1000);
+        $rolemanager->method('get_role')->willReturn((object)['id' => 1, 'shortname' => 'existingrole']);
+        $rolemanager->method('update_role_from_xml')->willThrowException(new \moodle_exception(
+            'error:unknown',
+            'local_bulk_roles_importer'
+        ));
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([
+            (object)['xml' => '<valid>xml</valid>', 'shortname' => 'ExistingRole', 'lastchange' => 2001],
+        ]);
+
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        // Shortname is normalised before lookup.
+        $this->assertStringContainsString('existingrole: Unknown error', $output);
+        $this->assertStringNotContainsString('[changes rolled back]', $output);
+    }
+
+    /**
+     * Test that a failure while linking allow lists of a new role is reported and keeps the import retryable.
+     *
+     * @return void
+     */
+    public function test_import_roles_failed_allow_linking_is_reported_and_retried(): void {
+        $created = false;
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(1000);
+        $rolemanager->method('get_role')->willReturnCallback(function () use (&$created) {
+            return $created ? (object)['id' => 5, 'shortname' => 'newrole'] : false;
+        });
+        $rolemanager->expects($this->once())->method('create_role_from_xml')
+            ->willReturnCallback(function () use (&$created): int {
+                $created = true;
+                return 5;
+            });
+        $rolemanager->expects($this->once())->method('update_role_allows_from_xml')->with(5, $this->anything())
+            ->willThrowException(new \moodle_exception('error:unknown', 'local_bulk_roles_importer'));
+        $rolemanager->expects($this->never())->method('update_role_from_xml');
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([
+            (object)['xml' => '<valid>xml</valid>', 'shortname' => 'NewRole', 'lastchange' => 2001],
+        ]);
+
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('newrole [created]', $output);
+        $this->assertStringContainsString('newrole: Unknown error', $output);
     }
 
     /**
@@ -123,6 +231,7 @@ final class roles_importer_test extends advanced_testcase {
         // These should NOT be called.
         $rolemanager->expects($this->never())->method('create_role_from_xml');
         $rolemanager->expects($this->never())->method('update_role_from_xml');
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
 
         // Mock strategy with "invalid" XML.
         $strategy = $this->createMock(roles_importer_strategy_interface::class);
@@ -136,7 +245,7 @@ final class roles_importer_test extends advanced_testcase {
         ]);
 
         // Use a subclass that simulates invalid XML.
-        $rolesimporter = new class('task', $rolemanager, ['mock' => get_class($strategy)]) extends roles_importer {
+        $rolesimporter = new class ('task', $rolemanager, ['mock' => get_class($strategy)]) extends roles_importer {
             /**
              * Mock strategy instance.
              *
@@ -188,6 +297,55 @@ final class roles_importer_test extends advanced_testcase {
     }
 
     /**
+     * An invalid shortname is reported as plain text and leaves the timestamp unchanged.
+     */
+    public function test_import_roles_escapes_invalid_shortname_in_web_log(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->expects($this->never())->method('get_role');
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $shortname = '<' . str_repeat('a', 101) . '&>';
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([(object)['xml' => '<role/>', 'shortname' => $shortname]]);
+        $rolesimporter = new testable_roles_importer('web', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString(s($shortname), $output);
+        $this->assertStringNotContainsString($shortname, $output);
+    }
+
+    /**
+     * A role missing in the second pass leaves the timestamp unchanged.
+     */
+    public function test_import_roles_does_not_mark_success_when_role_disappears(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(1000);
+        $rolemanager->expects($this->exactly(2))->method('get_role')->with('existingrole')
+            ->willReturn((object)['id' => 1], false);
+        $rolemanager->expects($this->never())->method('update_role_from_xml');
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([
+            (object)['xml' => '<role/>', 'shortname' => 'existingrole', 'lastchange' => 2001],
+        ]);
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('existingrole [Role not found]', $output);
+    }
+
+    /**
      * Test that import_roles exits gracefully when the strategy class is missing.
      *
      * @return void
@@ -225,7 +383,7 @@ final class roles_importer_test extends advanced_testcase {
         $strategy->method('get_roles')->willReturn([]); // No roles returned.
 
         // Use a custom subclass to inject the strategy.
-        $rolesimporter = new class('task', $rolemanager, ['mock' => get_class($strategy)]) extends roles_importer {
+        $rolesimporter = new class ('task', $rolemanager, ['mock' => get_class($strategy)]) extends roles_importer {
             /**
              * Mock strategy instance.
              *
@@ -283,7 +441,6 @@ final class roles_importer_test extends advanced_testcase {
  * @package     local_bulk_roles_importer
  */
 class testable_roles_importer extends roles_importer {
-
     /** @var roles_importer_strategy_interface */
     private roles_importer_strategy_interface $mockstrategy;
 

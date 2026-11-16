@@ -31,15 +31,15 @@ namespace local_bulk_roles_importer\local\util;
 
 use coding_exception;
 use context_system;
-use core_role_define_role_table_advanced;
 use core_role_preset;
+use core_text;
 use dml_exception;
+use moodle_exception;
 
 /**
  * Utility class definition - role manager.
  */
 class role_manager {
-
     /** @var int $lastimport Timestamp of last role importing. */
     private int $lastimport;
 
@@ -81,15 +81,7 @@ class role_manager {
      * @return false|mixed Return role data object if exist otherwise false.
      */
     public function role_exist($name): mixed {
-        $roles = get_all_roles();
-
-        foreach ($roles as $role) {
-            if ($role->shortname == $name) {
-                return $role;
-            }
-        }
-
-        return false;
+        return $this->get_role((string)$name);
     }
 
     /**
@@ -111,74 +103,176 @@ class role_manager {
     }
 
     /**
+     * Normalise a role shortname the same way Moodle parses a role preset.
+     *
+     * @param string $shortname Raw shortname.
+     * @return string Normalised shortname (may be empty when nothing valid remains).
+     */
+    public static function normalise_shortname(string $shortname): string {
+        return strtolower(clean_param($shortname, PARAM_ALPHANUMEXT));
+    }
+
+    /**
+     * Parse a preset and validate its normalised shortname.
+     *
+     * @param string $xml Role definition xml.
+     * @return array Parsed preset with the normalised shortname.
+     * @throws moodle_exception When the preset or its shortname is invalid.
+     */
+    protected function parse_and_validate_preset(string $xml): array {
+        $preset = core_role_preset::parse_preset($xml);
+        if (!is_array($preset)) {
+            throw new moodle_exception('error:invalid_xml', 'local_bulk_roles_importer');
+        }
+
+        $shortname = self::normalise_shortname((string)($preset['shortname'] ?? ''));
+        if ($shortname === '' || core_text::strlen($shortname) > 100) {
+            throw new moodle_exception(
+                'error:invalid_shortname',
+                'local_bulk_roles_importer',
+                '',
+                (string)($preset['shortname'] ?? '')
+            );
+        }
+        $preset['shortname'] = $shortname;
+
+        return $preset;
+    }
+
+    /**
+     * Ensure the target role exists and matches the preset shortname.
+     *
+     * @param int $roleid Moodle role id.
+     * @param string $shortname Normalised preset shortname.
+     * @return void
+     * @throws moodle_exception
+     */
+    protected function validate_target_role(int $roleid, string $shortname): void {
+        global $DB;
+
+        $current = $DB->get_field('role', 'shortname', ['id' => $roleid], MUST_EXIST);
+        if ($current !== $shortname) {
+            throw new moodle_exception('error:shortname_mismatch', 'local_bulk_roles_importer', '', $shortname);
+        }
+    }
+
+    /**
+     * Run the given callback inside a delegated transaction, rolling back on any failure.
+     *
+     * @param callable $callback Work to run.
+     * @return void
+     * @throws \Throwable Rethrows the original failure after rollback.
+     */
+    protected function run_in_transaction(callable $callback): void {
+        global $DB;
+
+        $transaction = $DB->start_delegated_transaction();
+        try {
+            $callback();
+            $transaction->allow_commit();
+        } catch (\Throwable $e) {
+            $transaction->rollback($e);
+        }
+    }
+
+    /**
      * Create new moodle role from given xml preset.
+     *
+     * Role data, context levels and permissions are written directly from the parsed
+     * preset in a single transaction, so a failure leaves no partial role behind and
+     * nothing depends on role-editor request parameters. Allow lists are linked later
+     * with update_role_allows_from_xml(), so they can reference roles created after
+     * this one in the same batch.
      *
      * @param string $xml Role definition xml.
      *
-     * @return void
-     * @throws coding_exception
-     * @throws dml_exception
+     * @return int New role id.
+     * @throws moodle_exception
      */
-    public function create_role_from_xml($xml): void {
-        $options = [
-            'shortname' => 1,
-            'name' => 1,
-            'description' => 1,
-            'permissions' => 1,
-            'archetype' => 1,
-            'contextlevels' => 1,
-            'allowassign' => 1,
-            'allowoverride' => 1,
-            'allowswitch' => 1,
-            'allowview' => 1,
-        ];
-        $context = context_system::instance();
-        $roledefiner = new core_role_define_role_table_advanced($context, 0);
-        $roledefiner->force_preset($xml, $options);
-        $roledefiner->read_submitted_permissions();
-        $roledefiner->save_changes();
+    public function create_role_from_xml(string $xml): int {
+        global $DB;
+
+        $preset = $this->parse_and_validate_preset($xml);
+        if ($DB->record_exists('role', ['shortname' => $preset['shortname']])) {
+            throw new moodle_exception('error:shortname_exists', 'local_bulk_roles_importer', '', $preset['shortname']);
+        }
+
+        $roleid = 0;
+        $this->run_in_transaction(function () use ($preset, &$roleid): void {
+            $roleid = (int)create_role(
+                (string)($preset['name'] ?? ''),
+                $preset['shortname'],
+                (string)($preset['description'] ?? ''),
+                (string)($preset['archetype'] ?? '')
+            );
+            $this->update_contextlevels($roleid, $preset['contextlevels'] ?? null);
+            $this->update_permissions($roleid, $preset['permissions'] ?? []);
+        });
+
+        return $roleid;
     }
 
     /**
      * Update existing Moodle role with given xml preset.
      *
+     * All changes run in one transaction. Context levels and allow lists are only
+     * changed when their XML section is present; an empty section clears them.
+     *
      * @param int $roleid Moodle role id.
      * @param string $xml Role definition xml.
      *
      * @return void
-     * @throws coding_exception
-     * @throws dml_exception
+     * @throws moodle_exception
      */
     public function update_role_from_xml(int $roleid, string $xml): void {
+        $preset = $this->parse_and_validate_preset($xml);
+        $this->validate_target_role($roleid, $preset['shortname']);
 
-        $preset = core_role_preset::parse_preset($xml);
+        $this->run_in_transaction(function () use ($roleid, $preset): void {
+            $this->update_role_info(
+                $roleid,
+                (string)($preset['name'] ?? ''),
+                $preset['shortname'],
+                (string)($preset['description'] ?? ''),
+                (string)($preset['archetype'] ?? '')
+            );
+            $this->update_contextlevels($roleid, $preset['contextlevels'] ?? null);
+            $this->apply_allows($roleid, $preset);
+            $this->update_permissions($roleid, $preset['permissions'] ?? []);
+        });
+    }
 
-        // Update general role info.
-        $name = $preset['name'] ?? '';
-        $shortname = $preset['shortname'] ?? '';
-        $description = $preset['description'] ?? '';
-        $archetype = $preset['archetype'] ?? '';
+    /**
+     * Update only the allow lists of an existing role from the given xml preset.
+     *
+     * Used for roles created earlier in the same import, so references to roles
+     * created later in the batch can be resolved without rewriting the whole role.
+     *
+     * @param int $roleid Moodle role id.
+     * @param string $xml Role definition xml.
+     * @return void
+     * @throws moodle_exception
+     */
+    public function update_role_allows_from_xml(int $roleid, string $xml): void {
+        $preset = $this->parse_and_validate_preset($xml);
+        $this->validate_target_role($roleid, $preset['shortname']);
 
-        $this->update_role_info($roleid, $name, $shortname, $description, $archetype);
+        $this->run_in_transaction(function () use ($roleid, $preset): void {
+            $this->apply_allows($roleid, $preset);
+        });
+    }
 
-        // Update context levels.
-        $contextlevels = $preset['contextlevels'] ?? [];
-        $this->update_contextlevels($roleid, $contextlevels);
-
-        // Update allow assign.
-        $this->update_allows('assign', $roleid, $preset['allowassign']);
-
-        // Update allow override.
-        $this->update_allows('override', $roleid, $preset['allowoverride']);
-
-        // Update allow switch.
-        $this->update_allows('switch', $roleid, $preset['allowswitch']);
-
-        // Update  allow view.
-        $this->update_allows('view', $roleid, $preset['allowview']);
-
-        // Update permissions.
-        $this->update_permissions($roleid, $preset['permissions']);
+    /**
+     * Apply all allow lists present in the parsed preset.
+     *
+     * @param int $roleid Moodle role id.
+     * @param array $preset Parsed preset.
+     * @return void
+     */
+    protected function apply_allows(int $roleid, array $preset): void {
+        foreach (['assign', 'override', 'switch', 'view'] as $allowtype) {
+            $this->update_allows($allowtype, $roleid, $preset['allow' . $allowtype] ?? null);
+        }
     }
 
     /**
@@ -194,7 +288,7 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function update_role_info(int $roleid, string $name, string $shortname, string $description, string $archetype): void {
+    protected function update_role_info(int $roleid, string $name, string $shortname, string $description, string $archetype): void {
         global $DB;
 
         $conditions = [
@@ -223,13 +317,18 @@ class role_manager {
      * Update context levels assignments for selected role with given context levels.
      *
      * @param int $roleid Moodle role id.
-     * @param array $contextlevels Context levels.
+     * @param array|null $contextlevels Context levels, or null to keep the current ones.
      *
      * @return void
      * @throws dml_exception
      */
-    private function update_contextlevels(int $roleid, array $contextlevels): void {
+    protected function update_contextlevels(int $roleid, ?array $contextlevels): void {
         global $DB;
+
+        // Section omitted from the preset: keep current context levels.
+        if ($contextlevels === null) {
+            return;
+        }
 
         // Get current context levels.
         $currentcontexts = get_role_contextlevels($roleid);
@@ -266,20 +365,26 @@ class role_manager {
      *
      * @param string $allowtype Type, ie: assign, override, switch and view.
      * @param int $roleid Moodle role id.
-     * @param array $permissions List of assigned allows.
+     * @param array|null $permissions Allowed role ids, or null to keep the current list.
      *
      * @return void
      * @throws dml_exception
      */
-    private function update_allows(string $allowtype, int $roleid, array $permissions): void {
+    protected function update_allows(string $allowtype, int $roleid, ?array $permissions): void {
         global $DB;
 
-        // Remove value '-1' from permissions.
-        foreach ($permissions as $key => $permission) {
-            if ($permission == -1) {
-                unset($permissions[$key]);
-            }
+        // Section omitted from the preset: keep current allow list.
+        if ($permissions === null) {
+            return;
         }
+
+        // The preset parser uses -1 for "this role"; resolve it to the role id.
+        $resolved = [];
+        foreach ($permissions as $permission) {
+            $permission = (int)$permission;
+            $resolved[] = ($permission === -1) ? $roleid : $permission;
+        }
+        $permissions = array_values(array_unique($resolved));
 
         $tablename = 'role_allow_' . $allowtype;
         $keyname = 'allow' . $allowtype;
@@ -342,7 +447,7 @@ class role_manager {
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function update_permissions(int $roleid, array $permissions): void {
+    protected function update_permissions(int $roleid, array $permissions): void {
         global $DB;
 
         // Get all defined capabilities in Moodle.
@@ -355,37 +460,28 @@ class role_manager {
             'roleid' => (int)$roleid,
             'contextid' => $context->id,
         ];
-        $rolescaps = $DB->get_records_menu('role_capabilities', $conditions, 'capability,permission');
+        $rolescaps = $DB->get_records_menu('role_capabilities', $conditions, '', 'capability,permission');
 
-        // Get through capabilities.
-        $changedcapability = 0;
         foreach ($permissions as $capability => $submittedvalue) {
-            // Check if capability exist in current moodle.
-            $exist = array_key_exists($capability, $definedcapabilities);
-            if (!$exist) {
+            // Skip capabilities that do not exist in this Moodle.
+            if (!array_key_exists($capability, $definedcapabilities)) {
                 continue;
             }
 
-            // Check if role has assigned capability.
+            $submittedvalue = (int)$submittedvalue;
             $rolehascap = array_key_exists($capability, $rolescaps);
-            if ($rolehascap) {
-                $currentvalue = (int)$rolescaps[$capability];
 
-                if ($currentvalue != $submittedvalue) {
-                    // Change value.
-                    assign_capability($capability, $submittedvalue, $roleid, $context, true);
-                    $changedcapability ++;
+            if ($submittedvalue === CAP_INHERIT) {
+                // Explicit inherit: remove any existing system-context override.
+                if ($rolehascap) {
+                    unassign_capability($capability, $roleid, $context->id);
                 }
-            } else {
-                if ($submittedvalue != 0) {
-                    // Create new entry for current role.
-                    assign_capability($capability, $submittedvalue, $roleid, $context, true);
-                    $changedcapability ++;
-                }
+                continue;
             }
 
-            unset($submittedvalue);
-            unset($currentvalue);
+            if (!$rolehascap || (int)$rolescaps[$capability] !== $submittedvalue) {
+                assign_capability($capability, $submittedvalue, $roleid, $context, true);
+            }
         }
     }
 
@@ -396,14 +492,13 @@ class role_manager {
      * @return false|mixed
      */
     public function get_role(string $shortname): mixed {
-        $roles = get_all_roles();
+        global $DB;
 
-        foreach ($roles as $role) {
-            if ($role->shortname == $shortname) {
-                return $role;
-            }
+        $shortname = self::normalise_shortname($shortname);
+        if ($shortname === '') {
+            return false;
         }
 
-        return false;
+        return $DB->get_record('role', ['shortname' => $shortname]);
     }
 }

@@ -29,8 +29,12 @@ defined('MOODLE_INTERNAL') || die();
 $string['error:cannot_obtain_roles'] = 'ERROR - cannot obtain roles';
 $string['error:incorrect_format_file'] = 'Incorrect format in file: {$a}';
 $string['error:invalid_file_format'] = 'Invalid file format. Must be an XML or a ZIP containing XML files.';
+$string['error:invalid_shortname'] = 'ERROR - invalid role shortname: "{$a}"';
 $string['error:invalid_xml'] = 'invalid XML';
 $string['error:main_branch_time'] = 'ERROR - cannot obtain main branch last updated time';
+$string['error:role_import_failed'] = 'ERROR - {$a->shortname}: {$a->error}';
+$string['error:shortname_exists'] = 'A role with shortname "{$a}" already exists';
+$string['error:shortname_mismatch'] = 'The target role does not have shortname "{$a}"';
 $string['error:strategy_does_not_exist'] = 'ERROR - source: {$a} does not exist';
 $string['error:strategy_not_automatic'] = 'ERROR - source: {$a} is not automatic';
 $string['error:unknown'] = 'Unknown error';
@@ -76,6 +80,7 @@ $string['label:scheduledtasksettingsdescription'] = 'Go to scheduled task settin
 $string['label:taskgitlabroles'] = 'Bulk Roles Importer - Import roles from GitLab.';
 $string['label:taskimportroles'] = 'Bulk Roles Importer - Import roles from selected source.';
 
+$string['log:allows_linked'] = '[created, allow lists linked]';
 $string['log:import_roles'] = 'IMPORT ROLES FROM SOURCE: {$a}';
 $string['log:role_created'] = '- {$a} [created]';
 $string['log:role_not_found'] = '[Role not found]';
