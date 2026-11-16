@@ -44,7 +44,7 @@ trait role_file_processor {
      * @return stdClass
      */
     protected function process_role_file_from_string(string $xml, string $filepath, int $lastchange): stdClass {
-        $xmlobject = simplexml_load_string($xml);
+        $xmlobject = simplexml_load_string($xml, \SimpleXMLElement::class, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
 
         $role = new stdClass();
         $role->lastchange = $lastchange;

@@ -33,44 +33,46 @@ use stdClass;
 
 /**
  * Definition class for Git provider API.
+ *
+ * Every method throws a provider_exception when a request fails or the response
+ * is not what the provider documents.
  */
 interface gitprovider_api_interface {
     /**
-     * Get selected branch info or false.
+     * Get the head commit of the configured branch.
      *
-     * @param string $name
-     * @return stdClass|false
+     * @return stdClass Object with sha (commit id) and time (commit timestamp).
      */
-    public function get_branch(string $name): stdClass|false;
+    public function get_head(): stdClass;
 
     /**
-     * Get timestamp of main branch last updated time or false.
+     * Get timestamp of the configured branch head commit.
      *
-     * @return false|int
+     * @return int
      */
-    public function get_main_branch_last_updated(): int|false;
+    public function get_main_branch_last_updated(): int;
 
     /**
-     * Get files list for selected branch, by default from main branch.
+     * Get all XML files on the configured branch, including nested folders.
      *
-     * @param ?string $branch
-     * @return array|false
+     * @return stdClass[] File records with path and blob revision.
      */
-    public function get_files(?string $branch = null): array|false;
+    public function get_files(): array;
 
     /**
-     * Get file content for selected filepath and branch.
+     * Get file content at the given ref.
      *
-     * @param string $branch Branch name.
+     * @param string $ref Branch name or commit id.
      * @param string $filepath File path.
-     * @return string|false
+     * @return string
      */
-    public function get_file_content(string $branch, string $filepath): string|false;
+    public function get_file_content(string $ref, string $filepath): string;
 
     /**
      * Get array of roles.
      *
+     * @param callable|null $findapplied Callback returning the existing role for an applied Git blob, or null.
      * @return array
      */
-    public function get_roles(): array;
+    public function get_roles(?callable $findapplied = null): array;
 }

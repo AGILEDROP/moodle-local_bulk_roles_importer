@@ -27,6 +27,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_bulk_roles_importer';
 $plugin->release = '1.0.1';
-$plugin->version = 2025041600;
+$plugin->version = 2026111601;
 $plugin->requires = 2022041900;
 $plugin->maturity = MATURITY_STABLE;

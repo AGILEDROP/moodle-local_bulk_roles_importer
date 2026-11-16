@@ -33,7 +33,9 @@ defined('MOODLE_INTERNAL') || die();
 
 use advanced_testcase;
 use local_bulk_roles_importer\local\traits\role_file_processor;
+use local_bulk_roles_importer\local\exception\provider_exception;
 use local_bulk_roles_importer\local\exception\transaction_rolled_back;
+use local_bulk_roles_importer\local\util\revision_store;
 use local_bulk_roles_importer\local\util\role_manager;
 use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
 
@@ -470,6 +472,245 @@ final class roles_importer_test extends advanced_testcase {
         $this->assertStringNotContainsString('<i>', $output);
         $this->assertStringContainsString('&lt;b&gt;bad&lt;/b&gt;', $output);
         $this->assertStringContainsString('&lt;i&gt;file&lt;/i&gt;.xml', $output);
+    }
+
+    /**
+     * Build a Git-sourced role record.
+     *
+     * @param string $revision Blob ID.
+     * @param string $shortname Role shortname.
+     * @return \stdClass
+     */
+    private function git_role(string $revision, string $shortname = 'gitrole'): \stdClass {
+        return (object)[
+            'xml' => '<role/>',
+            'shortname' => $shortname,
+            'lastchange' => 100,
+            'filename' => "roles/{$shortname}.xml",
+            'source' => (object)[
+                'provider' => 'gitlab',
+                'endpoint' => 'https://gitlab.example.test',
+                'repository' => 'group/roles',
+                'branch' => 'main',
+                'path' => "roles/{$shortname}.xml",
+                'revision' => $revision,
+            ],
+        ];
+    }
+
+    /**
+     * Run an import with a mocked strategy.
+     *
+     * @param role_manager $rolemanager
+     * @param array $roles
+     * @return string Output.
+     */
+    private function run_import(role_manager $rolemanager, array $roles): string {
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturnCallback(function (callable $findapplied) use ($roles): array {
+            return array_map(function ($role) use ($findapplied) {
+                if (isset($role->source) && ($applied = $findapplied($role->source))) {
+                    return (object)['source' => $role->source, 'shortname' => $applied->shortname, 'unchanged' => true];
+                }
+                return clone $role;
+            }, $roles);
+        });
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        try {
+            $rolesimporter->import_roles('mock');
+        } finally {
+            $output = ob_get_clean();
+        }
+        return $output;
+    }
+
+    /**
+     * Git roles are applied when their file revision changes, regardless of the shared timestamp.
+     *
+     * @return void
+     */
+    public function test_git_roles_use_per_file_revisions(): void {
+        $roleid = create_role('Git role', 'gitrole', '');
+
+        $rolemanager = $this->createMock(role_manager::class);
+        // A manual upload just advanced the shared timestamp past the commit time.
+        $rolemanager->method('get_lastimport')->willReturn(999999);
+        $rolemanager->method('get_role')->willReturn((object)['id' => $roleid]);
+        $rolemanager->expects($this->exactly(2))->method('update_role_from_xml');
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        // Baseline: no stored revision yet, so the file is applied and recorded.
+        $output = $this->run_import($rolemanager, [$this->git_role('rev1')]);
+        $this->assertStringContainsString('-gitrole [updated]', $output);
+
+        // Same revision: unchanged.
+        $output = $this->run_import($rolemanager, [$this->git_role('rev1')]);
+        $this->assertStringContainsString('-gitrole [X]', $output);
+
+        // New revision: applied again.
+        $output = $this->run_import($rolemanager, [$this->git_role('rev2')]);
+        $this->assertStringContainsString('-gitrole [updated]', $output);
+    }
+
+    /**
+     * A created Git role is recorded only after its allow lists are linked.
+     *
+     * @return void
+     */
+    public function test_git_revision_not_recorded_when_linking_fails(): void {
+        global $DB;
+
+        $created = false;
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(0);
+        $rolemanager->method('get_role')->willReturnCallback(function () use (&$created) {
+            return $created ? (object)['id' => 7] : false;
+        });
+        $rolemanager->method('create_role_from_xml')->willReturnCallback(function () use (&$created): int {
+            $created = true;
+            return 7;
+        });
+        $rolemanager->method('update_role_allows_from_xml')
+            ->willThrowException(new \moodle_exception('error:unknown', 'local_bulk_roles_importer'));
+
+        $role = $this->git_role('rev1');
+        try {
+            $this->run_import($rolemanager, [$role]);
+            $this->fail('Expected a scheduled retry');
+        } catch (provider_exception $e) {
+            $this->assertSame('error:import_incomplete', $e->errorcode);
+        }
+        $this->assertFalse($DB->record_exists(revision_store::TABLE, ['sourcekey' => revision_store::make_key($role->source)]));
+    }
+
+    /**
+     * A failed dependency leaves its referencing role eligible for the next run.
+     */
+    public function test_git_retries_unchanged_blob_after_missing_allow_target_is_created(): void {
+        global $DB;
+
+        $manager = new role_manager();
+        $rolea = $this->git_role('a1', 'rolea');
+        $rolea->xml = '<role><shortname>rolea</shortname><allowassign><shortname>roleb</shortname></allowassign></role>';
+        $roleb = $this->git_role('b1', 'roleb');
+        $roleb->invalid = true;
+        $roleb->fetcherror = 'Unavailable';
+
+        try {
+            $this->run_import($manager, [$rolea, $roleb]);
+            $this->fail('Expected the sync to fail');
+        } catch (provider_exception $e) {
+            $this->assertSame('error:import_incomplete', $e->errorcode);
+        }
+        $aid = $manager->get_role('rolea')->id;
+        $this->assertFalse($DB->record_exists('role_allow_assign', ['roleid' => $aid]));
+        $this->assertNull((new revision_store())->find_applied_role($rolea->source));
+
+        $roleb = $this->git_role('b1', 'roleb');
+        $roleb->xml = '<role><shortname>roleb</shortname></role>';
+        $this->run_import($manager, [$rolea, $roleb]);
+
+        $bid = $manager->get_role('roleb')->id;
+        $this->assertTrue($DB->record_exists('role_allow_assign', ['roleid' => $aid, 'allowassign' => $bid]));
+        $this->assertStringContainsString('-rolea [X]', $this->run_import($manager, [$rolea, $roleb]));
+
+        // Removing B also removes its links, so both unchanged presets need to be reapplied.
+        delete_role($bid);
+        $this->run_import($manager, [$rolea, $roleb]);
+        $newbid = $manager->get_role('roleb')->id;
+        $this->assertNotEquals($bid, $newbid);
+        $this->assertTrue($DB->record_exists('role_allow_assign', ['roleid' => $aid, 'allowassign' => $newbid]));
+    }
+
+    /**
+     * Switching back to a previously imported source reapplies its unchanged blobs.
+     */
+    public function test_git_reapplies_presets_when_switching_sources(): void {
+        $manager = new role_manager();
+        $gitlab = $this->git_role('lab');
+        $gitlab->xml = '<role><shortname>gitrole</shortname><name>GitLab role</name></role>';
+        $github = $this->git_role('hub');
+        $github->xml = '<role><shortname>gitrole</shortname><name>GitHub role</name></role>';
+        $github->source->provider = 'github';
+        $github->source->endpoint = 'https://api.github.example.test';
+
+        $this->run_import($manager, [$gitlab]);
+        $this->assertSame('GitLab role', $manager->get_role('gitrole')->name);
+        $this->run_import($manager, [$github]);
+        $this->assertSame('GitHub role', $manager->get_role('gitrole')->name);
+        $this->run_import($manager, [$gitlab]);
+        $this->assertSame('GitLab role', $manager->get_role('gitrole')->name);
+
+        $gitlabmirror = clone $gitlab->source;
+        $gitlabmirror->endpoint = 'https://other.gitlab.example.test';
+        $this->assertNotSame(revision_store::make_key($gitlab->source), revision_store::make_key($gitlabmirror));
+    }
+
+    /**
+     * Files that could not be fetched fail the run after the other roles are processed.
+     *
+     * @return void
+     */
+    public function test_fetch_failures_fail_the_run_after_processing(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(0);
+        $rolemanager->method('get_role')->willReturn((object)['id' => 1]);
+        $rolemanager->expects($this->once())->method('update_role_from_xml');
+
+        $broken = (object)[
+            'invalid' => true, 'xml' => '', 'lastchange' => 0, 'filename' => 'roles/broken.xml',
+            'fetcherror' => 'Git provider request failed with HTTP status 500',
+        ];
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([$broken, $this->git_role('rev1')]);
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        try {
+            $rolesimporter->import_roles('mock');
+            $this->fail('Expected exception');
+        } catch (provider_exception $e) {
+            $this->assertSame('error:import_incomplete', $e->errorcode);
+        } finally {
+            $output = ob_get_clean();
+        }
+        $this->assertStringContainsString('FAILED - roles/broken.xml: Git provider request failed', $output);
+        $this->assertStringContainsString('-gitrole [updated]', $output);
+    }
+
+    /**
+     * Provider failures before roles are listed are logged and rethrown for the task runner.
+     *
+     * @return void
+     */
+    public function test_provider_failure_is_rethrown(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(0);
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willThrowException(new provider_exception('error:provider_request', (object)[
+            'endpoint' => '/repos/o/r/commits', 'status' => 401, 'message' => 'Bad credentials',
+        ]));
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        try {
+            $rolesimporter->import_roles('mock');
+            $this->fail('Expected exception');
+        } catch (provider_exception $e) {
+            $this->assertSame('error:provider_request', $e->errorcode);
+        } finally {
+            $output = ob_get_clean();
+        }
+        $this->assertStringContainsString('HTTP status 401: Bad credentials', $output);
     }
 
     /**

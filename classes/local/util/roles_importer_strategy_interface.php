@@ -50,7 +50,8 @@ interface roles_importer_strategy_interface {
     /**
      * Returns an array of roles.
      *
+     * @param callable|null $findapplied Callback returning the existing role for an applied Git blob, or null.
      * @return array
      */
-    public function get_roles(): array;
+    public function get_roles(?callable $findapplied = null): array;
 }

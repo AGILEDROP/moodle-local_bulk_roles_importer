@@ -55,7 +55,7 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
     }
 
     #[\Override]
-    public function get_roles(): array {
+    public function get_roles(?callable $findapplied = null): array {
         $roles = [];
         $importfiledir = make_upload_directory('local_bulk_roles_importer');
         $importfilepath = $importfiledir . DIRECTORY_SEPARATOR . "import_roles_file";

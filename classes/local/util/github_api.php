@@ -29,120 +29,162 @@
 
 namespace local_bulk_roles_importer\local\util;
 
-use curl;
+use local_bulk_roles_importer\local\exception\provider_exception;
+use stdClass;
 
 /**
  * Definition class for GitHub API.
  */
-final class github_api extends gitprovider_api {
+class github_api extends gitprovider_api {
     #[\Override]
-    public function set_url(): void {
+    public function get_provider_name(): string {
+        return 'github';
+    }
+
+    #[\Override]
+    protected function set_url(): void {
         $this->url = $this->get_config_with_default('githuburl', 'https://api.github.com');
     }
 
     #[\Override]
-    public function set_token(): void {
-        $this->token = get_config('local_bulk_roles_importer', 'githubtoken');
+    protected function set_token(): void {
+        $this->token = (string)get_config('local_bulk_roles_importer', 'githubtoken');
     }
 
     #[\Override]
-    public function set_project(): void {
-        $project = $this->get_config_with_default('githubproject', 'moodle/template-01/roles');
-        $this->project = urlencode($project);
+    protected function set_project(): void {
+        $this->project = trim($this->get_config_with_default('githubproject', 'moodle/template-01/roles'), '/');
     }
 
     #[\Override]
-    public function set_mainbranch(): void {
+    protected function set_mainbranch(): void {
         $this->mainbranch = $this->get_config_with_default('githubmain', 'main');
     }
 
     #[\Override]
-    public function get_curl(): curl|false {
+    protected function get_headers(): array {
         $headers = [
-            'Authorization: Bearer ' . $this->get_token(),
             'Accept: application/vnd.github+json',
             'X-GitHub-Api-Version: 2022-11-28',
         ];
-        $curl = new \curl();
-        $curl->setHeader($headers);
+        if ($this->get_token() !== '') {
+            $headers[] = 'Authorization: Bearer ' . $this->get_token();
+        }
+        return $headers;
+    }
 
-        return $curl;
+    /**
+     * Base URL of the repository API, with owner and repository encoded.
+     *
+     * @return string
+     * @throws provider_exception When the project is not in owner/repository form.
+     */
+    protected function get_repo_url(): string {
+        $parts = explode('/', $this->get_project());
+        if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '') {
+            throw new provider_exception('error:provider_config', get_string('label:githubproject', 'local_bulk_roles_importer'));
+        }
+        return $this->get_url() . '/repos/' . rawurlencode($parts[0]) . '/' . rawurlencode($parts[1]);
     }
 
     #[\Override]
-    public function get_branches_url(): string {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'branches']);
-
-        return $url;
-    }
-
-    #[\Override]
-    public function get_main_branch_last_updated_timestamp(): false|string {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'commits', $this->get_mainbranch()]);
-
-        $commit = $this->get_data($url);
-        $commit = json_decode($commit);
-
-        return $commit->commit->author->date ?? false;
-    }
-
-    #[\Override]
-    public function get_files(?string $branch = null): array|false {
-        if (!$branch) {
-            $branch = $this->get_mainbranch();
+    protected function fetch_head(): stdClass {
+        $url = $this->get_repo_url() . '/commits?' . $this->query(['sha' => $this->get_mainbranch(), 'per_page' => 1]);
+        $commits = $this->request_list($url);
+        if (empty($commits)) {
+            throw $this->malformed($url, 'no commits on branch');
         }
 
-        if (!$branch) {
-            return false;
-        }
-
-        $url = $this->build_api_url(['repos', $this->get_project(), 'git/trees', $branch]);
-
-        $files = $this->get_data($url);
-
-        if (!$files) {
-            return false;
-        }
-
-        $files = json_decode($files);
-
-        return $files->tree;
+        return (object)[
+            'sha' => $this->require_string($commits[0], ['sha'], $url),
+            'time' => $this->require_time($commits[0], ['commit', 'committer', 'date'], $url),
+            'tree' => $this->require_string($commits[0], ['commit', 'tree', 'sha'], $url),
+        ];
     }
 
     #[\Override]
-    public function get_file_content(string $branch, string $filepath): false|string {
-        $url = $this->build_api_url(['repos', $this->get_project(), 'contents', $filepath, '?ref=' . $branch]);
+    public function get_files(): array {
+        $treesha = $this->get_head()->tree;
+        $url = $this->get_repo_url() . '/git/trees/' . rawurlencode($treesha) . '?' . $this->query(['recursive' => 1]);
+        $tree = $this->request_object($url);
 
-        $data = $this->get_data($url);
-        $json = json_decode($data);
-        $contentbase46 = $json->content;
-
-        return base64_decode($contentbase46);
-    }
-
-    #[\Override]
-    public function get_file_last_commit(string $filepath): false|int {
-        $url = $this->build_api_url([
-                'repos',
-                $this->get_project(),
-                'commits?path=' . $filepath . '&ref=' . $this->get_mainbranch(),
-        ]);
-
-        $data = $this->get_data($url);
-        $json = json_decode($data);
-
-        $lastpart = end($json);
-        $date = $lastpart->commit->author->date ?? false;
-
-        if (!$date) {
-            return 0;
+        if (!empty($tree->truncated)) {
+            // The recursive listing hit GitHub's limit: walk the folders one by one.
+            return $this->walk_tree($treesha, '');
         }
 
-        return strtotime($date);
+        return $this->collect_xml_blobs($tree, $url, '');
+    }
+
+    /**
+     * List XML files of a tree folder by folder.
+     *
+     * @param string $treesha Tree id.
+     * @param string $prefix Path of the tree inside the repository.
+     * @return stdClass[]
+     * @throws provider_exception
+     */
+    protected function walk_tree(string $treesha, string $prefix): array {
+        $url = $this->get_repo_url() . '/git/trees/' . rawurlencode($treesha);
+        $tree = $this->request_object($url);
+        if (!empty($tree->truncated)) {
+            throw $this->malformed($url, 'tree listing is truncated');
+        }
+
+        $files = $this->collect_xml_blobs($tree, $url, $prefix);
+        foreach ($tree->tree as $entry) {
+            if (($entry->type ?? '') === 'tree') {
+                $path = $this->require_string($entry, ['path'], $url);
+                $sha = $this->require_string($entry, ['sha'], $url);
+                $files = array_merge($files, $this->walk_tree($sha, $prefix . $path . '/'));
+            }
+        }
+        return $files;
+    }
+
+    /**
+     * Collect XML blob paths from a tree response.
+     *
+     * @param stdClass $tree Tree response.
+     * @param string $url Request URL, for error messages.
+     * @param string $prefix Path prefix.
+     * @return stdClass[]
+     * @throws provider_exception
+     */
+    protected function collect_xml_blobs(stdClass $tree, string $url, string $prefix): array {
+        if (!isset($tree->tree) || !is_array($tree->tree)) {
+            throw $this->malformed($url, 'missing tree');
+        }
+
+        $files = [];
+        foreach ($tree->tree as $entry) {
+            if (!$entry instanceof stdClass || ($entry->type ?? '') !== 'blob') {
+                continue;
+            }
+            $path = $prefix . $this->require_string($entry, ['path'], $url);
+            if ($this->is_xml_path($path)) {
+                $files[] = (object)['path' => $path, 'revision' => $this->require_string($entry, ['sha'], $url)];
+            }
+        }
+        return $files;
     }
 
     #[\Override]
-    public function format_url(string $url): string {
-        return urldecode($url); // GitHub expects raw slashes.
+    public function get_file_content(string $ref, string $filepath): string {
+        $url = $this->get_repo_url() . '/contents/' . $this->encode_path_segments($filepath) . '?' .
+            $this->query(['ref' => $ref]);
+        $file = $this->request_object($url);
+
+        if (($file->type ?? '') !== 'file') {
+            throw $this->malformed($url, 'not a file');
+        }
+        if (($file->encoding ?? '') !== 'base64') {
+            throw $this->malformed($url, 'unsupported content encoding (file may be larger than 1 MB)');
+        }
+        $content = base64_decode(preg_replace('/\s+/', '', $this->require_string($file, ['content'], $url)), true);
+        if ($content === false) {
+            throw $this->malformed($url, 'invalid base64 content');
+        }
+        return $content;
     }
 }

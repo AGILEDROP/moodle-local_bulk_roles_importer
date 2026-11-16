@@ -224,6 +224,36 @@ class role_manager {
     }
 
     /**
+     * Resolve every allow-list target in a Git preset before any links are overwritten.
+     *
+     * @param string $xml A validated role preset.
+     * @return array Target role IDs for each section present in the preset.
+     * @throws moodle_exception When a referenced role does not exist.
+     */
+    public function resolve_allow_lists(string $xml): array {
+        $preset = simplexml_load_string($xml);
+        $allowlists = [];
+        foreach (['allowassign', 'allowoverride', 'allowswitch', 'allowview'] as $section) {
+            if (!isset($preset->$section)) {
+                continue;
+            }
+            $allowlists[$section] = [];
+            foreach ($preset->$section->shortname as $target) {
+                $shortname = (string)$target;
+                $role = $this->get_role($shortname);
+                if (!$role) {
+                    throw new moodle_exception('error:missing_allow_target', 'local_bulk_roles_importer', '', (object)[
+                        'section' => $section,
+                        'shortname' => $shortname,
+                    ]);
+                }
+                $allowlists[$section][] = (int)$role->id;
+            }
+        }
+        return $allowlists;
+    }
+
+    /**
      * Update existing Moodle role with given xml preset.
      *
      * All changes run in one transaction. Context levels and allow lists are only
@@ -231,12 +261,13 @@ class role_manager {
      *
      * @param int $roleid Moodle role id.
      * @param string $xml Role definition xml.
+     * @param array|null $allowlists Resolved targets for Git imports, or null to use Moodle's preset parser.
      *
      * @return void
      * @throws moodle_exception
      */
-    public function update_role_from_xml(int $roleid, string $xml): void {
-        $preset = $this->parse_and_validate_preset($xml);
+    public function update_role_from_xml(int $roleid, string $xml, ?array $allowlists = null): void {
+        $preset = ($allowlists ?? []) + $this->parse_and_validate_preset($xml);
         $this->validate_target_role($roleid, $preset['shortname']);
 
         $this->run_in_transaction(function () use ($roleid, $preset): void {
@@ -261,11 +292,12 @@ class role_manager {
      *
      * @param int $roleid Moodle role id.
      * @param string $xml Role definition xml.
+     * @param array|null $allowlists Resolved targets for Git imports, or null to use Moodle's preset parser.
      * @return void
      * @throws moodle_exception
      */
-    public function update_role_allows_from_xml(int $roleid, string $xml): void {
-        $preset = $this->parse_and_validate_preset($xml);
+    public function update_role_allows_from_xml(int $roleid, string $xml, ?array $allowlists = null): void {
+        $preset = ($allowlists ?? []) + $this->parse_and_validate_preset($xml);
         $this->validate_target_role($roleid, $preset['shortname']);
 
         $this->run_in_transaction(function () use ($roleid, $preset): void {

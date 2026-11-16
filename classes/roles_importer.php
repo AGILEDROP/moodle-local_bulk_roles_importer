@@ -31,7 +31,9 @@ namespace local_bulk_roles_importer;
 
 use coding_exception;
 use dml_exception;
+use local_bulk_roles_importer\local\exception\provider_exception;
 use local_bulk_roles_importer\local\exception\transaction_rolled_back;
+use local_bulk_roles_importer\local\util\revision_store;
 use local_bulk_roles_importer\local\util\role_manager;
 use local_bulk_roles_importer\local\util\roles_importer_strategies_manager;
 use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
@@ -73,6 +75,11 @@ class roles_importer {
     /** @var int[] $counts Role outcome counts for the current import. */
     private array $counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
 
+    /** @var int $gitfailures Git files that need to be retried after a fetch or write failure. */
+    private int $gitfailures = 0;
+
+    /** @var revision_store $revisionstore Last applied revision of each Git role file. */
+    private revision_store $revisionstore;
 
     /**
      * Constructor.
@@ -80,13 +87,16 @@ class roles_importer {
      * @param string $loggingstyle
      * @param role_manager|null $rolemanager
      * @param array|null $rolesimportstrategies
+     * @param revision_store|null $revisionstore
      */
     public function __construct(
         string $loggingstyle = 'task',
         ?role_manager $rolemanager = null,
-        ?array $rolesimportstrategies = null
+        ?array $rolesimportstrategies = null,
+        ?revision_store $revisionstore = null
     ) {
         $this->rolemanager = $rolemanager ?? new role_manager();
+        $this->revisionstore = $revisionstore ?? new revision_store();
         $this->rolesimportstrategies = $rolesimportstrategies ?: roles_importer_strategies_manager::get_strategies_classes();
         $this->loggingstyle = in_array($loggingstyle, self::LOGGING_STYLES, true) ? $loggingstyle : 'task';
     }
@@ -133,23 +143,30 @@ class roles_importer {
 
         $strategyclass = $this->rolesimportstrategies[$strategy];
 
-        $this->rolesimportstrategy = $this->make_strategy_instance($strategyclass);
-
-        $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
-
-        if (!$this->lastchanges) {
-            $this->log_message(get_string('error:main_branch_time', 'local_bulk_roles_importer'));
-            return;
+        try {
+            $this->rolesimportstrategy = $this->make_strategy_instance($strategyclass);
+            $this->lastchanges = $this->rolesimportstrategy->get_last_updated();
+            if (!$this->lastchanges) {
+                $this->log_message(get_string('error:main_branch_time', 'local_bulk_roles_importer'));
+                return;
+            }
+            $sourcekey = null;
+            $roles = $this->rolesimportstrategy->get_roles(function (\stdClass $source) use (&$sourcekey): ?\stdClass {
+                $sourcekey ??= $this->revisionstore->begin_source($source);
+                return $this->revisionstore->find_applied_role($source);
+            });
+        } catch (provider_exception $e) {
+            // Log it, then let the scheduled task runner record the failure.
+            $this->log_with_separators($e->getMessage(), false, true);
+            throw $e;
         }
-
-        $roles = $this->rolesimportstrategy->get_roles();
 
         if (empty($roles)) {
             $this->log_message(get_string('error:cannot_obtain_roles', 'local_bulk_roles_importer'));
             return;
         }
 
-        $this->process_import($roles);
+        $this->process_import($roles, $sourcekey);
     }
 
     /**
@@ -163,12 +180,14 @@ class roles_importer {
      * roles are retried on the next run.
      *
      * @param array $roles Array of roles.
+     * @param string|null $sourcekey Git source key, if a source was selected for this run.
      * @return void
      * @throws coding_exception
      * @throws dml_exception
      */
-    private function process_import(array $roles): void {
+    private function process_import(array $roles, ?string $sourcekey): void {
         $this->counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
+        $this->gitfailures = 0;
 
         $this->process_new_roles($roles);
         $this->process_updated_roles($roles);
@@ -179,10 +198,25 @@ class roles_importer {
             true
         );
 
-        if ($this->counts['failed'] > 0) {
-            $this->log_with_separators(get_string('log:lastimport_kept', 'local_bulk_roles_importer'), false, true);
-        } else {
-            $this->rolemanager->mark_last_import_success();
+        // Git roles are tracked per file revision; the shared timestamp is only for other sources.
+        $tracked = false;
+        foreach ($roles as $role) {
+            $tracked = $tracked || isset($role->source);
+        }
+        if (!$tracked) {
+            if ($this->counts['failed'] > 0) {
+                $this->log_with_separators(get_string('log:lastimport_kept', 'local_bulk_roles_importer'), false, true);
+            } else {
+                $this->rolemanager->mark_last_import_success();
+            }
+        }
+
+        if ($sourcekey !== null && $this->counts['failed'] === 0) {
+            $this->revisionstore->complete_source($sourcekey);
+        }
+
+        if ($this->gitfailures > 0) {
+            throw new provider_exception('error:import_incomplete', $this->gitfailures);
         }
     }
 
@@ -195,9 +229,18 @@ class roles_importer {
     private function process_new_roles(array $roles): void {
         foreach ($roles as $role) {
             $role->needupdate = false;
+            if (!empty($role->unchanged)) {
+                continue;
+            }
 
             if (!empty($role->invalid)) {
                 $role->failed = true;
+                if (isset($role->fetcherror)) {
+                    // The provider request failed: report it and fail the run afterwards.
+                    $this->gitfailures++;
+                    $this->report_failure($role, null, (string)$role->fetcherror);
+                    continue;
+                }
                 $error = empty($role->readerror) ? 'error:not_role_xml' : 'error:cannot_read_file';
                 $this->report_failure($role, null, get_string($error, 'local_bulk_roles_importer'));
                 continue;
@@ -225,7 +268,7 @@ class roles_importer {
             $role->shortname = $shortname;
 
             if ($this->rolemanager->get_role($shortname)) {
-                $role->needupdate = (($role->lastchange ?? 0) > $this->lastimport);
+                $role->needupdate = isset($role->source) || (($role->lastchange ?? 0) > $this->lastimport);
                 continue;
             }
 
@@ -234,6 +277,7 @@ class roles_importer {
                 $this->rolemanager->create_role_from_xml($role->xml);
             } catch (\Throwable $e) {
                 $role->failed = true;
+                $this->count_git_failure($role);
                 $this->report_failure($role, $shortname, $e->getMessage(), $e instanceof transaction_rolled_back);
                 continue;
             }
@@ -269,6 +313,7 @@ class roles_importer {
 
             $moodlerole = $this->rolemanager->get_role($role->shortname);
             if (!$moodlerole) {
+                $this->count_git_failure($role);
                 $reason = get_string('error:role_missing', 'local_bulk_roles_importer');
                 if ($created) {
                     $reason = get_string('error:allows_not_linked', 'local_bulk_roles_importer', $reason);
@@ -279,15 +324,22 @@ class roles_importer {
 
             $roleid = (int)$moodlerole->id;
             try {
+                $allowlists = isset($role->source) ? $this->rolemanager->resolve_allow_lists($role->xml) : null;
                 if ($created) {
-                    $this->rolemanager->update_role_allows_from_xml($roleid, $role->xml);
+                    $this->rolemanager->update_role_allows_from_xml($roleid, $role->xml, $allowlists);
                     $message = get_string('log:allows_linked', 'local_bulk_roles_importer');
                 } else {
-                    $this->rolemanager->update_role_from_xml($roleid, $role->xml);
+                    $this->rolemanager->update_role_from_xml($roleid, $role->xml, $allowlists);
                     $this->counts['updated']++;
                     $message = get_string('log:updated', 'local_bulk_roles_importer');
                 }
+
+                // The role and its required links are applied: remember this file revision.
+                if ($allowlists !== null) {
+                    $this->revisionstore->set_revision($role->source, (int)$role->lastchange, $roleid, $allowlists);
+                }
             } catch (\Throwable $e) {
+                $this->count_git_failure($role);
                 // A created role stays created; only its allow lists are missing.
                 $reason = $e->getMessage();
                 if ($created) {
@@ -298,6 +350,17 @@ class roles_importer {
             }
 
             $this->log_with_separators('   -' . $role->shortname . ' ' . $message, false, true);
+        }
+    }
+
+    /**
+     * Mark an operational failure in a Git role for a scheduled retry.
+     *
+     * @param \stdClass $role Role record from the strategy.
+     */
+    private function count_git_failure(\stdClass $role): void {
+        if (isset($role->source)) {
+            $this->gitfailures++;
         }
     }
 

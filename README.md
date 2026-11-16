@@ -14,41 +14,80 @@ Upload a single XML file or a ZIP archive containing multiple XML files with rol
 Configure a repository (e.g. GitHub, GitLab) as the source for role XML files and define a schedule for periodic imports.
 At each scheduled time, the plugin will fetch the latest role definitions and update Moodle roles accordingly.
 
-### Why is an access token required?
-
-To fetch role definitions from private or rate-limited Git repositories, an authentication token is required:
-
-- **GitHub Token**  
-  Needed for authenticating API requests to access repository contents.  
-  → [Create a GitHub personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-
-- **GitLab Token**  
-  Used for accessing protected resources via GitLab’s API.  
-  → [Create a GitLab project access token](https://docs.gitlab.com/user/project/settings/project_access_tokens/#create-a-project-access-token)
-
-Paste the generated token into the corresponding field in the plugin settings.
-
 ### Manual Import
 
 Navigate to _Site administration > Users > Permissions > Import roles from a file_ to manually upload an XML file
 or a ZIP archive containing multiple XML files with Moodle role definitions. After uploading, click Import.
-The plugin will process each file and display the results. If a file is not in the correct XML format
-(i.e. the XML does not contain a <role> element),
-the plugin will log an error message with the file name and skip that file.
+The plugin processes each file and shows the results. It logs and skips files that are not valid Moodle role presets.
 
 ### Automatic Import
 
-In _Site administration > Users > Permissions > Bulk Roles Importer settings_, you can configure a repository
-(for example, GitHub, GitLab) as the source for your role XML files.
-You can also set a schedule for automatic imports so that the plugin periodically checks the repository
-for updated role definitions and applies the changes automatically.
-Detailed logging is provided during the import process, including notifications of successful role creation,
-updates, and any errors encountered with specific files.
+Open _Site administration > Users > Permissions > Bulk Roles Importer settings_ and select **GitHub** or **GitLab**
+under **Role import source**. The scheduled task uses the selected source.
 
-### Logging & Validation
+| Setting | GitHub | GitLab |
+| --- | --- | --- |
+| URL | `https://api.github.com` | `https://gitlab.com` or the base URL of your GitLab instance |
+| Project | `owner/repository` | `group/subgroup/project` or the numeric project ID |
+| Main branch | The branch containing the presets, such as `main` | The branch containing the presets, such as `main` |
+| Auth token | A fine-grained personal access token scoped to the repository with read-only **Contents** permission | A project access token with **Reporter** and `read_api`, or a personal access token with `read_api` and access to the project |
 
-- Full logs available after each import via CLI or the web interface.
-- Files with invalid XML structure or unsupported content are skipped and logged.
+Private repositories require a token. Public repositories may work without one, subject to the provider's API limits.
+[GitHub token setup](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+· [GitLab project tokens](https://docs.gitlab.com/user/project/settings/project_access_tokens/)
+· [GitLab token scopes](https://docs.gitlab.com/security/tokens/access_token_scopes/)
+
+Use **Role preset paths** in the GitHub or GitLab settings to choose which presets to import.
+Enter one path per line, relative to the root of the configured branch.
+
+- `roles/moodle-5` selects all XML presets under that folder, including nested folders.
+- `roles/teacher.xml` selects that file.
+- An empty field imports all XML files on the branch.
+
+If a configured path matches no XML files, the import stops and reports the unmatched paths.
+Include the presets for linked roles if those roles do not already exist in Moodle.
+
+For each file the plugin stores the last successfully applied Git blob ID, scoped to the provider,
+API URL, repository, branch and file path. Unchanged files are skipped before download when their role
+and linked targets still exist. Manual file uploads do not change Git revision tracking. Switching Git
+sources reapplies the selected source's presets once, including when switching back to an earlier source.
+
+A revision is stored only after the role and its allow lists are applied. If a preset references a
+missing role, the importer reports its shortname and retries the referring preset after the target is available.
+
+After upgrading from 1.0.x, the first Git import applies each selected role file once and records its blob ID
+as the baseline. Existing Moodle roles with matching shortnames are updated in place.
+
+### Testing a Git import
+
+Use a test branch with a few role presets. After saving the settings, follow **Edit schedule** to the scheduled task
+and select **Run now** if available. You can also run the task from the Moodle directory that contains `admin/cli`.
+
+```sh
+php admin/cli/scheduled_task.php --execute='\local_bulk_roles_importer\task\import_roles'
+```
+
+1. Run the task and verify a created or updated role under _Site administration > Users > Permissions > Define roles_.
+2. Run it again against the same branch with the same files. Successfully imported files should be counted as `unchanged`.
+3. Change one test role's description in the repository, commit and push it, then run the task again. Only that role should be updated.
+
+### Reading the import log
+
+Check the `Created`, `updated`, `unchanged`, and `failed` counts at the end of the log. Moodle can report the
+scheduled task as `Success` when it skips an invalid preset, such as a file whose root element is not `<role>`.
+The log identifies the failed file while the other roles can still import. Correct the file or exclude it with
+**Role preset paths**, then rerun the task. Provider and role-write errors mark the scheduled task as failed so
+Moodle can retry it.
+
+### Role presets from Moodle 4.5
+
+When using a 4.5 role export on Moodle 5.x, update the capability names in a separate copy of the presets.
+
+- Rename `tiny/premium:accesspremium` to `tiny/premium:use`. Keep it in the same permission element.
+- Remove `mod/data:comment` and `mod/data:managecomments`. Moodle 5.0 deprecated these unused capabilities without replacements.
+
+An import can complete with deprecation warnings. Use the Moodle 5.x copy to apply the renamed capability
+under its current name, and verify the resulting permissions in Moodle.
 
 ### Example Role XML
 

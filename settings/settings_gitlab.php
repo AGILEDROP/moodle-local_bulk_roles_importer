@@ -102,3 +102,20 @@ $settingsmain->hide_if(
     'neq',
     'gitlab'
 );
+
+$setting = new admin_setting_configtextarea(
+    'local_bulk_roles_importer/gitlabpaths',
+    new lang_string('label:preset_paths', 'local_bulk_roles_importer'),
+    new lang_string('label:preset_paths_help', 'local_bulk_roles_importer'),
+    '',
+    PARAM_RAW,
+    '60',
+    '4'
+);
+$settingsmain->add($setting);
+$settingsmain->hide_if(
+    'local_bulk_roles_importer/gitlabpaths',
+    'local_bulk_roles_importer/roleretrievalsource',
+    'neq',
+    'gitlab'
+);

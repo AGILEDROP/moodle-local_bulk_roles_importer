@@ -54,7 +54,7 @@ class gitlab_roles_importer_strategy implements roles_importer_strategy_interfac
     }
 
     #[\Override]
-    public function get_roles(): array {
-        return $this->gitlab->get_roles();
+    public function get_roles(?callable $findapplied = null): array {
+        return $this->gitlab->get_roles($findapplied);
     }
 }
