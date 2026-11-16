@@ -14,6 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * Exception for a rolled-back role import transaction.
+ *
+ * File         transaction_rolled_back.php
+ * Encoding     UTF-8
+ *
+ * @package     local_bulk_roles_importer
+ * @copyright   Agiledrop, 2025
+ * @author      Agiledrop ltd. <developer@agiledrop.com>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace local_bulk_roles_importer\local\exception;
 
 /**

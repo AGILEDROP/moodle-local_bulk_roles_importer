@@ -17,7 +17,7 @@
 /**
  * Trait for role file processing.
  *
- * File         role_file_processor.php.php
+ * File         role_file_processor.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
