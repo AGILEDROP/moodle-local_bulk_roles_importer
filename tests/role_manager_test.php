@@ -289,7 +289,8 @@ final class role_manager_test extends advanced_testcase {
         try {
             $manager->update_role_from_xml($roleid, $this->preset('atomicrole', ['system'], null, [], 'Changed'));
             $this->fail('Expected exception');
-        } catch (\coding_exception $e) {
+        } catch (\local_bulk_roles_importer\local\exception\transaction_rolled_back $e) {
+            $this->assertInstanceOf(\coding_exception::class, $e->getPrevious());
             $this->assertStringContainsString('boom', $e->getMessage());
         }
 

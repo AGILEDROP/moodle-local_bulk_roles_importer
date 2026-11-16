@@ -84,10 +84,8 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
         foreach ($filepaths as $filepath) {
             $role = $this->process_role_file_from_path($filepath, time());
 
-            // Override filename for display if imported from ZIP.
-            if ($this->iszip) {
-                $role->filename = basename($filepath);
-            }
+            // Show the name inside the ZIP; a single upload falls back to the uploaded file name.
+            $role->filename = $this->iszip ? basename($filepath) : null;
 
             $roles[] = $role;
         }

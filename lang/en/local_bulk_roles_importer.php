@@ -26,18 +26,24 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['error:allows_not_linked'] = 'role was created, but its allow lists were not linked: {$a}';
 $string['error:cannot_obtain_roles'] = 'ERROR - cannot obtain roles';
+$string['error:cannot_read_file'] = 'could not read the file';
+$string['error:file_failed'] = 'FAILED - {$a->file}: {$a->reason}';
 $string['error:incorrect_format_file'] = 'Incorrect format in file: {$a}';
 $string['error:invalid_file_format'] = 'Invalid file format. Must be an XML or a ZIP containing XML files.';
-$string['error:invalid_shortname'] = 'ERROR - invalid role shortname: "{$a}"';
+$string['error:invalid_shortname'] = 'invalid role shortname "{$a}"';
 $string['error:invalid_xml'] = 'invalid XML';
 $string['error:main_branch_time'] = 'ERROR - cannot obtain main branch last updated time';
-$string['error:role_import_failed'] = 'ERROR - {$a->shortname}: {$a->error}';
+$string['error:not_role_xml'] = 'not a role definition XML file';
+$string['error:role_failed'] = 'FAILED - {$a->file} ({$a->shortname}): {$a->reason}';
+$string['error:role_missing'] = 'role not found';
 $string['error:shortname_exists'] = 'A role with shortname "{$a}" already exists';
 $string['error:shortname_mismatch'] = 'The target role does not have shortname "{$a}"';
 $string['error:strategy_does_not_exist'] = 'ERROR - source: {$a} does not exist';
 $string['error:strategy_not_automatic'] = 'ERROR - source: {$a} is not automatic';
 $string['error:unknown'] = 'Unknown error';
+$string['error:unknown_file'] = 'unknown file';
 
 $string['form:description'] = 'Description';
 $string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
@@ -82,8 +88,10 @@ $string['label:taskimportroles'] = 'Bulk Roles Importer - Import roles from sele
 
 $string['log:allows_linked'] = '[created, allow lists linked]';
 $string['log:import_roles'] = 'IMPORT ROLES FROM SOURCE: {$a}';
+$string['log:lastimport_kept'] = 'Some roles failed, so the last import time was not updated. Changed roles will be processed again on the next run.';
 $string['log:role_created'] = '- {$a} [created]';
-$string['log:role_not_found'] = '[Role not found]';
+$string['log:rolled_back'] = '[changes rolled back]';
+$string['log:summary'] = 'Created: {$a->created}, updated: {$a->updated}, unchanged: {$a->unchanged}, failed: {$a->failed}';
 $string['log:updated'] = '[updated]';
 
 $string['pluginname'] = 'Bulk Roles Importer';

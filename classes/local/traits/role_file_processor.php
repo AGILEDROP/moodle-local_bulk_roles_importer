@@ -68,14 +68,18 @@ trait role_file_processor {
      *
      * @param string $filepath
      * @param int $lastchange
-     * @return stdClass|null
+     * @return stdClass Role record or an invalid record if the file cannot be read.
      */
-    protected function process_role_file_from_path(string $filepath, int $lastchange): ?stdClass {
-        if (!file_exists($filepath)) {
-            return null;
+    protected function process_role_file_from_path(string $filepath, int $lastchange): stdClass {
+        $xml = is_file($filepath) ? @file_get_contents($filepath) : false;
+        if ($xml === false) {
+            return (object)[
+                'filename' => basename($filepath),
+                'invalid' => true,
+                'readerror' => true,
+            ];
         }
 
-        $xml = file_get_contents($filepath);
         return $this->process_role_file_from_string($xml, $filepath, $lastchange);
     }
 }

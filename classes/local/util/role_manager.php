@@ -34,6 +34,7 @@ use context_system;
 use core_role_preset;
 use core_text;
 use dml_exception;
+use local_bulk_roles_importer\local\exception\transaction_rolled_back;
 use moodle_exception;
 
 /**
@@ -161,7 +162,8 @@ class role_manager {
      *
      * @param callable $callback Work to run.
      * @return void
-     * @throws \Throwable Rethrows the original failure after rollback.
+     * @throws transaction_rolled_back When the work failed and the transaction was rolled back.
+     * @throws \Throwable When the rollback itself failed.
      */
     protected function run_in_transaction(callable $callback): void {
         global $DB;
@@ -171,7 +173,16 @@ class role_manager {
             $callback();
             $transaction->allow_commit();
         } catch (\Throwable $e) {
-            $transaction->rollback($e);
+            try {
+                // Rolls back, then rethrows $e.
+                $transaction->rollback($e);
+            } catch (\Throwable $rethrown) {
+                if ($rethrown !== $e) {
+                    // The rollback itself failed, so do not report a rollback.
+                    throw $rethrown;
+                }
+            }
+            throw new transaction_rolled_back($e);
         }
     }
 

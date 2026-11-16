@@ -32,6 +32,8 @@ namespace local_bulk_roles_importer;
 defined('MOODLE_INTERNAL') || die();
 
 use advanced_testcase;
+use local_bulk_roles_importer\local\traits\role_file_processor;
+use local_bulk_roles_importer\local\exception\transaction_rolled_back;
 use local_bulk_roles_importer\local\util\role_manager;
 use local_bulk_roles_importer\local\util\roles_importer_strategy_interface;
 
@@ -119,6 +121,7 @@ final class roles_importer_test extends advanced_testcase {
         $this->assertStringContainsString('newrole [created]', $output);
         $this->assertStringContainsString('existingrole [updated]', $output);
         $this->assertStringContainsString('newrole [created, allow lists linked]', $output);
+        $this->assertStringContainsString('Created: 1, updated: 1, unchanged: 0, failed: 0', $output);
     }
 
     /**
@@ -175,8 +178,10 @@ final class roles_importer_test extends advanced_testcase {
         $output = ob_get_clean();
 
         // Shortname is normalised before lookup.
-        $this->assertStringContainsString('existingrole: Unknown error', $output);
+        $this->assertStringContainsString('FAILED - unknown file (existingrole): Unknown error', $output);
+        // Nothing reports a rollback unless a transaction was rolled back.
         $this->assertStringNotContainsString('[changes rolled back]', $output);
+        $this->assertStringContainsString('failed: 1', $output);
     }
 
     /**
@@ -215,7 +220,12 @@ final class roles_importer_test extends advanced_testcase {
         $output = ob_get_clean();
 
         $this->assertStringContainsString('newrole [created]', $output);
-        $this->assertStringContainsString('newrole: Unknown error', $output);
+        $this->assertStringContainsString(
+            '(newrole): role was created, but its allow lists were not linked: Unknown error',
+            $output
+        );
+        $this->assertStringContainsString('Created: 1, updated: 0, unchanged: 0, failed: 1', $output);
+        $this->assertStringContainsString('last import time was not updated', $output);
     }
 
     /**
@@ -344,7 +354,122 @@ final class roles_importer_test extends advanced_testcase {
         $rolesimporter->import_roles('mock');
         $output = ob_get_clean();
 
-        $this->assertStringContainsString('existingrole [Role not found]', $output);
+        $this->assertStringContainsString('(existingrole): role not found', $output);
+    }
+
+    /**
+     * A rolled-back write is reported as rolled back, with file name and shortname.
+     *
+     * @return void
+     */
+    public function test_import_roles_reports_rollback_only_for_rolled_back_transactions(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(1000);
+        $rolemanager->method('get_role')->willReturnCallback(function ($shortname) {
+            return in_array($shortname, ['rolledback', 'validation']) ? (object)['id' => 1] : false;
+        });
+        $rolemanager->method('update_role_from_xml')->willReturnCallback(function ($roleid, $xml) {
+            if ($xml === 'rollback') {
+                throw new transaction_rolled_back(new \coding_exception('write failed'));
+            }
+            throw new \moodle_exception('error:shortname_mismatch', 'local_bulk_roles_importer', '', 'validation');
+        });
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([
+            (object)['xml' => 'rollback', 'shortname' => 'rolledback', 'lastchange' => 2001, 'filename' => 'a.xml'],
+            (object)['xml' => 'validate', 'shortname' => 'validation', 'lastchange' => 2001, 'filename' => 'b.xml'],
+        ]);
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $this->assertMatchesRegularExpression(
+            '/FAILED - a\.xml \(rolledback\): .*write failed.* \[changes rolled back\]/',
+            $output
+        );
+        $this->assertMatchesRegularExpression('/FAILED - b\.xml \(validation\): [^\n]*shortname "validation"\n/', $output);
+        $this->assertSame(1, substr_count($output, '[changes rolled back]'));
+    }
+
+    /**
+     * Failures do not stop independent roles, and the summary counts every outcome.
+     *
+     * @return void
+     */
+    public function test_import_roles_continues_after_failures_and_counts_outcomes(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(1000);
+        $rolemanager->method('get_role')->willReturnCallback(function ($shortname) {
+            return in_array($shortname, ['updated', 'unchanged']) ? (object)['id' => 1] : false;
+        });
+        $rolemanager->expects($this->once())->method('update_role_from_xml');
+        $rolemanager->expects($this->never())->method('mark_last_import_success');
+
+        $fileprocessor = new class {
+            use role_file_processor {
+                process_role_file_from_path as public;
+            }
+        };
+        $unreadable = $fileprocessor->process_role_file_from_path(__DIR__ . '/fixtures/missing-role.xml', 2001);
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([
+            $unreadable,
+            (object)['invalid' => true, 'xml' => '', 'filename' => 'broken.xml'],
+            (object)['xml' => '<role/>', 'shortname' => '!!!', 'filename' => 'bad.xml'],
+            (object)['xml' => '<role/>', 'shortname' => 'updated', 'lastchange' => 2001, 'filename' => 'u.xml'],
+            (object)['xml' => '<role/>', 'shortname' => 'unchanged', 'lastchange' => 500, 'filename' => 'n.xml'],
+        ]);
+        $rolesimporter = new testable_roles_importer('task', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString('FAILED - missing-role.xml: could not read the file', $output);
+        $this->assertStringContainsString('FAILED - broken.xml: not a role definition XML file', $output);
+        $this->assertStringContainsString('FAILED - bad.xml (!!!): invalid role shortname "!!!"', $output);
+        $this->assertStringContainsString('-updated [updated]', $output);
+        $this->assertStringContainsString('-unchanged [X]', $output);
+        $this->assertStringContainsString('Created: 0, updated: 1, unchanged: 1, failed: 3', $output);
+    }
+
+    /**
+     * Exception messages and file names are escaped in the web log.
+     *
+     * @return void
+     */
+    public function test_import_roles_escapes_failure_details_in_web_log(): void {
+        $rolemanager = $this->createMock(role_manager::class);
+        $rolemanager->method('get_lastimport')->willReturn(1000);
+        $rolemanager->method('get_role')->willReturn(false);
+        $rolemanager->method('create_role_from_xml')
+            ->willThrowException(new transaction_rolled_back(new \coding_exception('<b>bad</b>')));
+
+        $strategy = $this->createMock(roles_importer_strategy_interface::class);
+        $strategy->method('get_last_updated')->willReturn(2000);
+        $strategy->method('get_roles')->willReturn([
+            (object)['xml' => '<role/>', 'shortname' => 'webrole', 'filename' => '<i>file</i>.xml'],
+        ]);
+        $rolesimporter = new testable_roles_importer('web', $rolemanager, ['mock' => get_class($strategy)]);
+        $rolesimporter->set_mock_strategy($strategy);
+
+        ob_start();
+        $rolesimporter->import_roles('mock');
+        $output = ob_get_clean();
+
+        $this->assertStringNotContainsString('<b>', $output);
+        $this->assertStringNotContainsString('<i>', $output);
+        $this->assertStringContainsString('&lt;b&gt;bad&lt;/b&gt;', $output);
+        $this->assertStringContainsString('&lt;i&gt;file&lt;/i&gt;.xml', $output);
     }
 
     /**
