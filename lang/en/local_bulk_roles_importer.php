@@ -29,6 +29,8 @@ defined('MOODLE_INTERNAL') || die();
 $string['error:allows_not_linked'] = 'role was created, but its allow lists were not linked: {$a}';
 $string['error:cannot_obtain_roles'] = 'ERROR - cannot obtain roles';
 $string['error:cannot_read_file'] = 'could not read the file';
+$string['error:cannot_read_upload'] = 'The uploaded file could not be read.';
+$string['error:extract_failed'] = 'The ZIP file could not be extracted.';
 $string['error:file_failed'] = 'FAILED - {$a->file}: {$a->reason}';
 $string['error:import_incomplete'] = 'Git role import incomplete: {$a} role file(s) could not be fetched or applied.';
 $string['error:incorrect_format_file'] = 'Incorrect format in file: {$a}';
@@ -51,6 +53,7 @@ $string['error:strategy_does_not_exist'] = 'ERROR - source: {$a} does not exist'
 $string['error:strategy_not_automatic'] = 'ERROR - source: {$a} is not automatic';
 $string['error:unknown'] = 'Unknown error';
 $string['error:unknown_file'] = 'unknown file';
+$string['error:upload_failed'] = 'The uploaded file could not be saved. Please try again.';
 
 $string['form:description'] = 'Description';
 $string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
@@ -106,6 +109,10 @@ $string['log:updated'] = '[updated]';
 $string['pluginname'] = 'Bulk Roles Importer';
 
 $string['privacy:metadata'] = 'The Bulk Roles Importer plugin does not store any personal data.';
+
+$string['provider:file'] = 'File';
+$string['provider:github'] = 'Github';
+$string['provider:gitlab'] = 'Gitlab';
 
 $string['settings:pagetitlefile'] = 'Import roles from a file';
 $string['settings:pagetitlemain'] = 'Bulk roles importer settings';

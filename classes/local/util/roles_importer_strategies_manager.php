@@ -33,20 +33,20 @@ namespace local_bulk_roles_importer\local\util;
  * Roles importer strategies manager.
  */
 class roles_importer_strategies_manager {
-    /** @var array $rolesimporterstrategies Array of all roles importer strategies. */
+    /** @var array $rolesimporterstrategies Array of all roles importer strategies; names are language string IDs. */
     private static array $rolesimporterstrategies = [
         'github' => [
-            'name' => 'Github',
+            'name' => 'provider:github',
             'class' => github_roles_importer_strategy::class,
             'automatic' => true,
         ],
         'gitlab' => [
-            'name' => 'Gitlab',
+            'name' => 'provider:gitlab',
             'class' => gitlab_roles_importer_strategy::class,
             'automatic' => true,
         ],
         'file' => [
-            'name' => 'File',
+            'name' => 'provider:file',
             'class' => file_roles_importer_strategy::class,
             'automatic' => false,
         ],
@@ -59,7 +59,7 @@ class roles_importer_strategies_manager {
      */
     public static function get_strategies_names(): array {
         $mapfunction = function ($value) {
-            return $value['name'];
+            return get_string($value['name'], 'local_bulk_roles_importer');
         };
         return array_map($mapfunction, self::$rolesimporterstrategies);
     }
@@ -74,7 +74,7 @@ class roles_importer_strategies_manager {
             return $value['automatic'];
         };
         $mapfunction = function ($value) {
-            return $value['name'];
+            return get_string($value['name'], 'local_bulk_roles_importer');
         };
         $filteredarray = array_filter(self::$rolesimporterstrategies, $filterfunction);
         return array_map($mapfunction, $filteredarray);

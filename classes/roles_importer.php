@@ -33,6 +33,7 @@ use coding_exception;
 use dml_exception;
 use local_bulk_roles_importer\local\exception\provider_exception;
 use local_bulk_roles_importer\local\exception\transaction_rolled_back;
+use local_bulk_roles_importer\local\util\file_roles_importer_strategy;
 use local_bulk_roles_importer\local\util\revision_store;
 use local_bulk_roles_importer\local\util\role_manager;
 use local_bulk_roles_importer\local\util\roles_importer_strategies_manager;
@@ -71,6 +72,9 @@ class roles_importer {
 
     /** @var string|null $importfilename Name of the import file. */
     private ?string $importfilename = null;
+
+    /** @var string|null $importfilepath Path of the uploaded file for the file strategy. */
+    private ?string $importfilepath = null;
 
     /** @var int[] $counts Role outcome counts for the current import. */
     private array $counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'failed' => 0];
@@ -419,6 +423,9 @@ class roles_importer {
      * @return roles_importer_strategy_interface
      */
     protected function make_strategy_instance(string $strategyclass): roles_importer_strategy_interface {
+        if (is_a($strategyclass, file_roles_importer_strategy::class, true)) {
+            return new $strategyclass($this->importfilepath);
+        }
         return new $strategyclass();
     }
 
@@ -448,5 +455,15 @@ class roles_importer {
      */
     public function set_import_filename(string $filename): void {
         $this->importfilename = $filename;
+    }
+
+    /**
+     * Set the path of the uploaded file used by the file strategy.
+     *
+     * @param string $filepath
+     * @return void
+     */
+    public function set_import_filepath(string $filepath): void {
+        $this->importfilepath = $filepath;
     }
 }

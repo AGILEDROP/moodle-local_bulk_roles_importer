@@ -41,33 +41,46 @@ $PAGE->set_url(new moodle_url('/local/bulk_roles_importer/import_from_file.php')
 $PAGE->set_title($title);
 $PAGE->set_heading($title);
 
-
 $mform = new importfromfile_form();
 if ($mform->is_cancelled()) {
-    redirect('/admin/search.php#linkusers');
-} else if ($fromform = $mform->get_data()) {
-    $content = $mform->get_file_content('userfile');
-    $name = $mform->get_new_filename('userfile');
+    redirect(new moodle_url('/admin/search.php', null, 'linkusers'));
+}
 
-    $importfilepath = make_upload_directory('local_bulk_roles_importer') . "/import_roles_file";
-    $success = $mform->save_file('userfile', $importfilepath, true);
+echo $OUTPUT->header();
 
-    echo '<h3 class="h3">' . get_string('import:runsuccesslogheader', 'local_bulk_roles_importer') . '</h3><div class="log">';
+if ($mform->get_data()) {
+    // Each request stages its upload in its own directory, so concurrent imports cannot collide.
+    $requestdir = make_request_directory();
+    try {
+        $name = $mform->get_new_filename('userfile');
+        $importfilepath = $requestdir . DIRECTORY_SEPARATOR . 'import_roles_file';
 
-    $rolesimporter = new roles_importer('web');
-    $rolesimporter->set_import_filename($name);
-    $rolesimporter->import_roles('file');
+        if ($name === false || !$mform->save_file('userfile', $importfilepath, true)) {
+            echo $OUTPUT->notification(get_string('error:upload_failed', 'local_bulk_roles_importer'), 'error');
+        } else {
+            echo $OUTPUT->heading(get_string('import:runsuccesslogheader', 'local_bulk_roles_importer'), 3);
+            echo html_writer::start_div('log');
+            try {
+                $rolesimporter = new roles_importer('web');
+                $rolesimporter->set_import_filename($name);
+                $rolesimporter->set_import_filepath($importfilepath);
+                $rolesimporter->import_roles('file');
+            } catch (moodle_exception $e) {
+                echo $OUTPUT->notification(s($e->getMessage()), 'error');
+            }
+            echo html_writer::end_div();
+        }
+    } finally {
+        remove_dir($requestdir);
+    }
 
-    echo '</div>';
     echo $OUTPUT->single_button(
         new moodle_url('/local/bulk_roles_importer/import_from_file.php'),
         get_string('back'),
         'get'
     );
 } else {
-    echo $OUTPUT->header();
-
     $mform->display();
-
-    echo $OUTPUT->footer();
 }
+
+echo $OUTPUT->footer();
