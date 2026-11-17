@@ -6,6 +6,10 @@ Role definitions can be uploaded manually or synced automatically from a Git-bas
 This plugin is ideal for Moodle sites managing many custom roles across multiple environments or needing regular synchronization
 with a version-controlled repository.
 
+### Requirements ###
+- Moodle 4.3 or later
+- PHP 8.0 or later (as required by your Moodle version)
+
 ### Features ###
 -  **Manual Import:**
 Upload a single XML file or a ZIP archive containing multiple XML files with role definitions.
@@ -19,6 +23,7 @@ At each scheduled time, the plugin will fetch the latest role definitions and up
 Navigate to _Site administration > Users > Permissions > Import roles from a file_ to manually upload an XML file
 or a ZIP archive containing multiple XML files with Moodle role definitions. After uploading, click Import.
 The plugin processes each file and shows the results. It logs and skips files that are not valid Moodle role presets.
+If the upload cannot be saved, the ZIP archive cannot be extracted or the file cannot be read, an error is shown and no roles are imported.
 
 ### Automatic Import
 
@@ -93,6 +98,10 @@ under its current name, and verify the resulting permissions in Moodle.
 
 For your convenience, an example role XML file is provided in the `/samples` directory. This sample demonstrates
 a simplified role definition that includes only a few key permissions, making it easier to customize for your needs.
+
+## Changelog ##
+
+See [CHANGELOG.md](CHANGELOG.md) for the changes in each release.
 
 ## Installing via uploaded ZIP file ##
 
