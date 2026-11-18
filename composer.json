@@ -1,0 +1,17 @@
+{
+  "name": "agiledrop/moodle-local_bulk_roles_importer",
+  "description": "Import Moodle roles from XML presets and sync role definitions from a Git repository.",
+  "type": "moodle-local",
+  "minimum-stability": "stable",
+  "license": "GPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "Agiledrop ltd.",
+      "email": "hello@agiledrop.com"
+    }
+  ],
+  "require": {
+    "moodle/moodle": ">=4.3",
+    "moodle/composer-installer": "*"
+  }
+}

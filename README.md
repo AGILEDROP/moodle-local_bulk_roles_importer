@@ -103,28 +103,31 @@ a simplified role definition that includes only a few key permissions, making it
 
 See [CHANGELOG.md](CHANGELOG.md) for the changes in each release.
 
-## Installing via uploaded ZIP file ##
+## Installation
 
-1. Log in to your Moodle site as an admin and go to _Site administration >
-   Plugins > Install plugins_.
-2. Upload the ZIP file with the plugin code. You should only be prompted to add
-   extra details if your plugin type is not automatically detected.
-3. Check the plugin validation report and finish the installation.
+### Composer
 
-## Installing manually ##
+Once a stable release is available on Packagist, run this command from the root of your Composer-managed Moodle project:
 
-The plugin can be also installed by putting the contents of this directory to
+```bash
+composer require agiledrop/moodle-local_bulk_roles_importer
+```
 
-    {your/moodle/dirroot}/local/bulk_roles_importer
+### ZIP
 
-Afterwards, log in to your Moodle site as an admin and go to _Site
-administration > Notifications_ to complete the installation.
+Choose a release compatible with your Moodle version. Open **Site administration → Plugins → Install plugins**, upload the plugin ZIP and follow the installation prompts.
 
-Alternatively, you can run
+### Manual or Git installation
 
-    $ php admin/cli/upgrade.php
+Extract the plugin or check out the matching release from the [GitHub repository](https://github.com/AGILEDROP/moodle-local_bulk_roles_importer) into `local/bulk_roles_importer/` under Moodle's web root. If your project uses a `public/` web root, the path from the project root is `public/local/bulk_roles_importer/`. The directory should contain the plugin's `version.php`.
 
-to complete the installation from the command line.
+### Complete the installation
+
+After installing the files with Composer, manually or with Git, open **Site administration → Notifications**. Alternatively, run the following command from the Moodle project root:
+
+```bash
+php admin/cli/upgrade.php
+```
 
 ## License ##
 
