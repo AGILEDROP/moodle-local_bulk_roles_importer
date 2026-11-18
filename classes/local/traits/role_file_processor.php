@@ -17,7 +17,7 @@
 /**
  * Trait for role file processing.
  *
- * File         role_file_processor.php.php
+ * File         role_file_processor.php
  * Encoding     UTF-8
  *
  * @package     local_bulk_roles_importer
@@ -35,7 +35,6 @@ use stdClass;
  * Trait for role file processing.
  */
 trait role_file_processor {
-
     /**
      * Process a role XML string.
      *
@@ -45,7 +44,7 @@ trait role_file_processor {
      * @return stdClass
      */
     protected function process_role_file_from_string(string $xml, string $filepath, int $lastchange): stdClass {
-        $xmlobject = simplexml_load_string($xml);
+        $xmlobject = simplexml_load_string($xml, \SimpleXMLElement::class, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
 
         $role = new stdClass();
         $role->lastchange = $lastchange;
@@ -69,14 +68,18 @@ trait role_file_processor {
      *
      * @param string $filepath
      * @param int $lastchange
-     * @return stdClass|null
+     * @return stdClass Role record or an invalid record if the file cannot be read.
      */
-    protected function process_role_file_from_path(string $filepath, int $lastchange): ?stdClass {
-        if (!file_exists($filepath)) {
-            return null;
+    protected function process_role_file_from_path(string $filepath, int $lastchange): stdClass {
+        $xml = is_file($filepath) ? @file_get_contents($filepath) : false;
+        if ($xml === false) {
+            return (object)[
+                'filename' => basename($filepath),
+                'invalid' => true,
+                'readerror' => true,
+            ];
         }
 
-        $xml = file_get_contents($filepath);
         return $this->process_role_file_from_string($xml, $filepath, $lastchange);
     }
 }

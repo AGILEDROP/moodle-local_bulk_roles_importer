@@ -31,8 +31,9 @@ namespace local_bulk_roles_importer\local\util;
 
 defined('MOODLE_INTERNAL') || die();
 
-use curl;
+use core_text;
 use dml_exception;
+use local_bulk_roles_importer\local\exception\provider_exception;
 use local_bulk_roles_importer\local\traits\role_file_processor;
 use stdClass;
 
@@ -43,7 +44,6 @@ require_once($CFG->libdir . '/filelib.php');
  * Definition class for Git provider API.
  */
 abstract class gitprovider_api implements gitprovider_api_interface {
-
     use role_file_processor;
 
     /** @var string $url Url link to root of repositories. */
@@ -52,20 +52,14 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     /** @var string $token Access token, generated in Git provider account settings. */
     protected string $token;
 
-    /** @var string $project Project name. */
+    /** @var string $project Project path as configured, without encoding. */
     protected string $project;
 
     /** @var string $mainbranch Main/master branch name. */
     protected string $mainbranch;
 
-    /** @var bool $error Has error. */
-    private bool $error;
-
-    /** @var int $errorcode Error code. */
-    private int $errorcode;
-
-    /** @var string $errormessage Error message. */
-    private string $errormessage;
+    /** @var stdClass|null $head Cached head commit of the configured branch. */
+    private ?stdClass $head = null;
 
     /**
      * Construct method.
@@ -75,8 +69,14 @@ abstract class gitprovider_api implements gitprovider_api_interface {
         $this->set_token();
         $this->set_project();
         $this->set_mainbranch();
-        $this->set_error(false);
     }
+
+    /**
+     * Short provider name used for revision tracking, e.g. github.
+     *
+     * @return string
+     */
+    abstract public function get_provider_name(): string;
 
     /**
      * Set url.
@@ -92,7 +92,7 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @return string
      */
     protected function get_url(): string {
-        return $this->url;
+        return rtrim($this->url, '/');
     }
 
     /**
@@ -120,11 +120,11 @@ abstract class gitprovider_api implements gitprovider_api_interface {
     abstract protected function set_project(): void;
 
     /**
-     * Get project name.
+     * Get project path as configured.
      *
      * @return string
      */
-    protected function get_project(): string {
+    public function get_project(): string {
         return $this->project;
     }
 
@@ -145,8 +145,8 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      * @throws dml_exception
      */
     protected function get_config_with_default(string $configname, string $default): string {
-        $value = get_config('local_bulk_roles_importer', $configname);
-        return empty($value) ? $default : $value;
+        $value = trim((string)get_config('local_bulk_roles_importer', $configname));
+        return ($value === '') ? $default : $value;
     }
 
     /**
@@ -154,255 +154,315 @@ abstract class gitprovider_api implements gitprovider_api_interface {
      *
      * @return string
      */
-    protected function get_mainbranch(): string {
+    public function get_mainbranch(): string {
         return $this->mainbranch;
     }
 
     /**
-     * Set error.
+     * Request headers, including authentication.
      *
-     * @param bool $error
-     * @return void
+     * @return string[]
      */
-    protected function set_error(bool $error): void {
-        $this->error = $error;
-    }
+    abstract protected function get_headers(): array;
 
     /**
-     * Returns whether an error has occurred.
+     * Fetch the head commit of the configured branch.
      *
-     * @return bool
+     * @return stdClass Object with sha and time.
      */
-    protected function is_error(): bool {
-        return $this->error;
-    }
+    abstract protected function fetch_head(): stdClass;
 
-    /**
-     * Set error code.
-     *
-     * @param int $code Error code.
-     * @return void
-     */
-    protected function set_errorcode(int $code): void {
-        $this->errorcode = $code;
-    }
-
-    /**
-     * Get error code.
-     *
-     * @return int
-     */
-    protected function get_errorcode(): int {
-        return $this->errorcode;
-    }
-
-    /**
-     * Set error message.
-     *
-     * @param string $message Error message.
-     * @return void
-     */
-    protected function set_errormessage(string $message): void {
-        $this->errormessage = $message;
-    }
-
-    /**
-     * Get error message.
-     *
-     * @return string
-     */
-    protected function get_errormessage(): string {
-        return $this->errormessage;
-    }
-
-    /**
-     * Get curl response from given url or false.
-     *
-     * @return curl|false
-     */
-    abstract protected function get_curl(): curl|false;
-
-    /**
-     * Get json decoded response from given url or false.
-     *
-     * @param string $url Url.
-     * @return bool|string
-     */
-    protected function get_data(string $url): bool|string {
-        $curl = $this->get_curl();
-
-        $url = $this->format_url($url);
-
-        $data = $curl->get($url);
-
-        $info = $curl->get_info();
-        $responsecode = $info['http_code'] ?? 0;
-
-        if ($responsecode != 200) {
-            $json = json_decode($data);
-            $message = $json->message ?? get_string('error:unknown', 'local_bulk_roles_importer');
-            $this->set_error(true);
-            $this->set_errorcode($responsecode);
-            $this->set_errormessage($message);
-            return false;
+    #[\Override]
+    public function get_head(): stdClass {
+        if ($this->head === null) {
+            $this->head = $this->fetch_head();
         }
+        return $this->head;
+    }
 
+    #[\Override]
+    public function get_main_branch_last_updated(): int {
+        return $this->get_head()->time;
+    }
+
+    /**
+     * Perform a GET request.
+     *
+     * Kept separate so tests can replace the transport.
+     *
+     * @param string $url Full URL.
+     * @return stdClass Object with status (int), body (string) and error (string).
+     */
+    protected function http_get(string $url): stdClass {
+        $curl = new \curl();
+        $curl->setHeader($this->get_headers());
+        $body = $curl->get($url);
+        $info = $curl->get_info();
+
+        return (object)[
+            'status' => (int)($info['http_code'] ?? 0),
+            'body' => is_string($body) ? $body : '',
+            'error' => $curl->get_errno() ? (string)$curl->error : '',
+        ];
+    }
+
+    /**
+     * Perform a GET request and return the body of a successful response.
+     *
+     * @param string $url Full URL.
+     * @return string
+     * @throws provider_exception On transport errors and non-200 responses.
+     */
+    protected function request(string $url): string {
+        $response = $this->http_get($url);
+        if ($response->status !== 200 || $response->error !== '') {
+            $message = ($response->error !== '') ? $response->error : $this->extract_error_message($response->body);
+            throw new provider_exception('error:provider_request', (object)[
+                'endpoint' => $this->describe_endpoint($url),
+                'status' => $response->status,
+                'message' => $message,
+            ]);
+        }
+        return $response->body;
+    }
+
+    /**
+     * Perform a GET request and decode a JSON object response.
+     *
+     * @param string $url Full URL.
+     * @return stdClass
+     * @throws provider_exception
+     */
+    protected function request_object(string $url): stdClass {
+        $data = json_decode($this->request($url));
+        if (!$data instanceof stdClass) {
+            throw $this->malformed($url, 'expected a JSON object');
+        }
         return $data;
     }
 
     /**
-     * Get branches url
+     * Perform a GET request and decode a JSON array response.
      *
-     * @return string
+     * @param string $url Full URL.
+     * @return array
+     * @throws provider_exception
      */
-    abstract protected function get_branches_url(): string;
-
-    /**
-     * Get array of branches or false.
-     *
-     * @return false|array
-     */
-    protected function get_branches(): false|array {
-        $url = $this->get_branches_url();
-        $branches = $this->get_data($url);
-
-        if (!$branches) {
-            return false;
+    protected function request_list(string $url): array {
+        $data = json_decode($this->request($url));
+        if (!is_array($data)) {
+            throw $this->malformed($url, 'expected a JSON array');
         }
-
-        return json_decode($branches);
+        return $data;
     }
 
-    #[\Override]
-    public function get_branch(string $name): false|stdClass {
-        $branches = $this->get_branches();
-        if (!$branches) {
-            return false;
+    /**
+     * Read a non-empty string property, following a list of nested property names.
+     *
+     * @param mixed $data Decoded JSON.
+     * @param string[] $path Property names.
+     * @param string $url Request URL, for error messages.
+     * @return string
+     * @throws provider_exception
+     */
+    protected function require_string($data, array $path, string $url): string {
+        foreach ($path as $property) {
+            if (!$data instanceof stdClass || !property_exists($data, $property)) {
+                throw $this->malformed($url, 'missing ' . implode('.', $path));
+            }
+            $data = $data->$property;
+        }
+        if (!is_string($data) || $data === '') {
+            throw $this->malformed($url, 'invalid ' . implode('.', $path));
+        }
+        return $data;
+    }
+
+    /**
+     * Read and parse a date property as a timestamp.
+     *
+     * @param mixed $data Decoded JSON.
+     * @param string[] $path Property names.
+     * @param string $url Request URL, for error messages.
+     * @return int
+     * @throws provider_exception
+     */
+    protected function require_time($data, array $path, string $url): int {
+        $time = strtotime($this->require_string($data, $path, $url));
+        if ($time === false) {
+            throw $this->malformed($url, 'invalid ' . implode('.', $path));
+        }
+        return $time;
+    }
+
+    /**
+     * Build a malformed response exception.
+     *
+     * @param string $url Request URL.
+     * @param string $message Problem description.
+     * @return provider_exception
+     */
+    protected function malformed(string $url, string $message): provider_exception {
+        return new provider_exception('error:provider_response', (object)[
+            'endpoint' => $this->describe_endpoint($url),
+            'message' => $message,
+        ]);
+    }
+
+    /**
+     * Extract a short error message from a provider error body.
+     *
+     * @param string $body Response body.
+     * @return string
+     */
+    protected function extract_error_message(string $body): string {
+        $json = json_decode($body);
+        $message = null;
+        if ($json instanceof stdClass) {
+            $message = $json->message ?? $json->error ?? null;
+            if (!is_string($message) && $message !== null) {
+                $message = json_encode($message);
+            }
+        }
+        if (!is_string($message) || trim($message) === '') {
+            return get_string('error:unknown', 'local_bulk_roles_importer');
+        }
+        return core_text::substr(clean_param($message, PARAM_NOTAGS), 0, 200);
+    }
+
+    /**
+     * Describe a request URL for logs: path and query only, no host or credentials.
+     *
+     * @param string $url Full URL.
+     * @return string
+     */
+    protected function describe_endpoint(string $url): string {
+        $parts = parse_url($url);
+        $endpoint = $parts['path'] ?? '';
+        if (!empty($parts['query'])) {
+            $endpoint .= '?' . $parts['query'];
+        }
+        return $endpoint;
+    }
+
+    /**
+     * Build a query string encoded as RFC 3986.
+     *
+     * @param array $params Query parameters.
+     * @return string
+     */
+    protected function query(array $params): string {
+        return http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * Encode each segment of a file path, keeping the slashes.
+     *
+     * @param string $path File path.
+     * @return string
+     */
+    protected function encode_path_segments(string $path): string {
+        return implode('/', array_map('rawurlencode', explode('/', $path)));
+    }
+
+    /**
+     * Whether a repository path is an XML file.
+     *
+     * @param string $path File path.
+     * @return bool
+     */
+    protected function is_xml_path(string $path): bool {
+        return strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'xml';
+    }
+
+    /**
+     * Read the configured repository-relative folder and role preset file paths.
+     *
+     * @return string[] Configured paths, or an empty array to import the entire branch.
+     */
+    private function get_preset_paths(): array {
+        $configured = $this->get_config_with_default($this->get_provider_name() . 'paths', '');
+        $paths = [];
+        foreach (preg_split('/\r\n|\r|\n/', $configured) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            $path = rtrim($line, '/');
+            if (str_contains($path, '\\') || array_intersect(explode('/', $path), ['', '.', '..'])) {
+                throw new provider_exception('error:preset_path_invalid', $line);
+            }
+            $paths[] = $path;
+        }
+        return array_unique($paths);
+    }
+
+    /**
+     * Select only XML blobs under the configured paths before checking revisions or downloading files.
+     *
+     * @param stdClass[] $files Listed XML blobs.
+     * @param string[] $paths Configured paths, or an empty array to select all files.
+     * @return stdClass[] XML blobs matching the configured paths.
+     */
+    private function select_preset_files(array $files, array $paths): array {
+        if ($paths === []) {
+            return $files;
         }
 
-        foreach ($branches as $branch) {
-            if ($branch->name == $name) {
-                return $branch;
+        $matched = array_fill_keys($paths, false);
+        $selected = [];
+        foreach ($files as $file) {
+            foreach ($paths as $path) {
+                if ($file->path === $path || str_starts_with($file->path, $path . '/')) {
+                    $matched[$path] = true;
+                    $selected[$file->path] = $file;
+                }
             }
         }
 
-        return false;
-    }
-
-    /**
-     * Return last commit timestamp from main branch.
-     *
-     * @return string|false
-     */
-    abstract protected function get_main_branch_last_updated_timestamp(): false|string;
-
-    #[\Override]
-    public function get_main_branch_last_updated(): false|int {
-        $timestamp = $this->get_main_branch_last_updated_timestamp();
-
-        if (!$timestamp) {
-            return false;
+        $unmatched = array_keys(array_filter($matched, fn($found) => !$found));
+        if ($unmatched) {
+            throw new provider_exception('error:preset_paths_unmatched', (object)[
+                'branch' => $this->get_mainbranch(),
+                'paths' => implode(', ', $unmatched),
+            ]);
         }
-
-        return strtotime($timestamp);
+        return array_values($selected);
     }
 
     #[\Override]
-    abstract public function get_files(?string $branch = null): array|false;
-
-    #[\Override]
-    abstract public function get_file_content(string $branch, string $filepath): false|string;
-
-    /**
-     * Get timestamp for last commit or 0.
-     *
-     * @param string $filepath
-     * @return false|int
-     */
-    abstract protected function get_file_last_commit(string $filepath): false|int;
-
-    #[\Override]
-    public function get_roles(): array {
+    public function get_roles(?callable $findapplied = null): array {
+        $paths = $this->get_preset_paths();
+        $head = $this->get_head();
         $roles = [];
-        $files = $this->get_files();
 
-        if (!$files) {
-            return $roles;
-        }
-
-        foreach ($files as $file) {
-            $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
-            $lastcommit = $this->get_file_last_commit($file->path);
-
-            $role = $this->process_role_file_from_string($xml, $file->path, $lastcommit);
+        foreach ($this->select_preset_files($this->get_files(), $paths) as $file) {
+            $path = $file->path;
+            $source = (object)[
+                'provider' => $this->get_provider_name(),
+                'endpoint' => $this->get_url(),
+                'repository' => $this->get_project(),
+                'branch' => $this->get_mainbranch(),
+                'path' => $path,
+                'revision' => $file->revision,
+            ];
+            $applied = $findapplied === null ? null : $findapplied($source);
+            if ($applied !== null) {
+                $role = (object)['shortname' => $applied->shortname, 'unchanged' => true];
+            } else {
+                try {
+                    $xml = $this->get_file_content($head->sha, $path);
+                    $role = $this->process_role_file_from_string($xml, $path, $head->time);
+                } catch (provider_exception $e) {
+                    // Report this file and continue; the importer fails the run afterwards.
+                    $role = (object)['invalid' => true, 'fetcherror' => $e->getMessage()];
+                }
+            }
+            $role->filename = $path;
+            $role->source = $source;
             $roles[] = $role;
         }
 
         return $roles;
-    }
-
-    /**
-     * Process a file and return a role object.
-     *
-     * If the file is not an XML or does not contain a <role> root element,
-     * an "invalid" role object is returned with the filename and XML contents.
-     *
-     * @param object $file A file object with a 'path' property.
-     * @return \stdClass|null The role object, or null if the file should be skipped.
-     */
-    protected function process_role_file(object $file): ?\stdClass {
-        $fileinfo = pathinfo($file->path);
-        $filetype = strtolower($fileinfo['extension'] ?? '');
-
-        // Skip non-XML files.
-        if ($filetype !== 'xml') {
-            return null;
-        }
-
-        $lastcommit = $this->get_file_last_commit($file->path);
-        $xml = $this->get_file_content($this->get_mainbranch(), $file->path);
-        $xmlstring = simplexml_load_string($xml);
-
-        $role = new \stdClass();
-        $role->lastchange = $lastcommit;
-        $role->xml = $xml;
-
-        // Check if the XML is valid and has <role> as the root.
-        if (!$xmlstring || $xmlstring->getName() !== 'role') {
-            $role->invalid = true;
-            $role->filename = basename($file->path);
-        } else {
-            $json = json_encode($xmlstring);
-            $jsondata = json_decode($json, true);
-            $role->shortname = $jsondata['shortname'] ?? false;
-            $role->filename = $file->path;
-        }
-
-        return $role;
-    }
-
-    /**
-     * Build an API URL from the given parts.
-     *
-     * @param array $parts An array of URL parts.
-     * @return string The full API URL.
-     */
-    protected function build_api_url(array $parts): string {
-        $url = rtrim($this->get_url(), '/');
-        foreach ($parts as $part) {
-            $url .= '/' . ltrim($part, '/');
-        }
-        return $url;
-    }
-
-    /**
-     * Allows each provider to modify the URL if needed.
-     * Default behavior is to return the URL as-is.
-     *
-     * @param string $url
-     * @return string
-     */
-    public function format_url(string $url): string {
-        return $url;
     }
 }

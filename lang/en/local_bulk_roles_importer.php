@@ -26,14 +26,34 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['error:allows_not_linked'] = 'role was created, but its allow lists were not linked: {$a}';
 $string['error:cannot_obtain_roles'] = 'ERROR - cannot obtain roles';
+$string['error:cannot_read_file'] = 'could not read the file';
+$string['error:cannot_read_upload'] = 'The uploaded file could not be read.';
+$string['error:extract_failed'] = 'The ZIP file could not be extracted.';
+$string['error:file_failed'] = 'FAILED - {$a->file}: {$a->reason}';
+$string['error:import_incomplete'] = 'Git role import incomplete: {$a} role file(s) could not be fetched or applied.';
 $string['error:incorrect_format_file'] = 'Incorrect format in file: {$a}';
 $string['error:invalid_file_format'] = 'Invalid file format. Must be an XML or a ZIP containing XML files.';
+$string['error:invalid_shortname'] = 'invalid role shortname "{$a}"';
 $string['error:invalid_xml'] = 'invalid XML';
 $string['error:main_branch_time'] = 'ERROR - cannot obtain main branch last updated time';
+$string['error:missing_allow_target'] = 'role "{$a->shortname}" referenced in {$a->section} does not exist';
+$string['error:not_role_xml'] = 'not a role definition XML file';
+$string['error:preset_path_invalid'] = 'Invalid role preset path "{$a}". Enter a path relative to the repository root.';
+$string['error:preset_paths_unmatched'] = 'No XML role presets matched these paths on branch "{$a->branch}": {$a->paths}';
+$string['error:provider_config'] = 'Git provider setting is invalid: {$a}';
+$string['error:provider_request'] = 'Git provider request {$a->endpoint} failed with HTTP status {$a->status}: {$a->message}';
+$string['error:provider_response'] = 'Git provider returned an unexpected response for {$a->endpoint}: {$a->message}';
+$string['error:role_failed'] = 'FAILED - {$a->file} ({$a->shortname}): {$a->reason}';
+$string['error:role_missing'] = 'role not found';
+$string['error:shortname_exists'] = 'A role with shortname "{$a}" already exists';
+$string['error:shortname_mismatch'] = 'The target role does not have shortname "{$a}"';
 $string['error:strategy_does_not_exist'] = 'ERROR - source: {$a} does not exist';
 $string['error:strategy_not_automatic'] = 'ERROR - source: {$a} is not automatic';
 $string['error:unknown'] = 'Unknown error';
+$string['error:unknown_file'] = 'unknown file';
+$string['error:upload_failed'] = 'The uploaded file could not be saved. Please try again.';
 
 $string['form:description'] = 'Description';
 $string['form:descriptiontext'] = 'You can upload either a single XML file, a ZIP file containing XML files.';
@@ -53,7 +73,7 @@ $string['label:filesource_help'] = 'Select the file with role files to import.';
 $string['label:githubmain'] = 'Main branch';
 $string['label:githubmain_help'] = 'Enter Github main branch name.';
 $string['label:githubproject'] = 'Project';
-$string['label:githubproject_help'] = 'Enter Github project name.';
+$string['label:githubproject_help'] = 'Enter the GitHub repository as owner/repository, for example agiledrop/moodle-roles.';
 $string['label:githubtoken'] = 'Auth token';
 $string['label:githubtoken_help'] = 'Enter your GitHub personal access token. This token is required to access private repositories via the GitHub API.
 You can create one by following the instructions at https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens';
@@ -62,13 +82,15 @@ $string['label:githuburl_help'] = 'Enter Github URL without slash at the end.';
 $string['label:gitlabmain'] = 'Main branch';
 $string['label:gitlabmain_help'] = 'Enter Gitlab main branch name.';
 $string['label:gitlabproject'] = 'Project';
-$string['label:gitlabproject_help'] = 'Enter Gitlab project name.';
+$string['label:gitlabproject_help'] = 'Enter the full GitLab project path, for example group/subgroup/project, or the numeric project ID.';
 $string['label:gitlabtoken'] = 'Auth token';
 $string['label:gitlabtoken_help'] = 'Enter your GitLab personal or project access token. This token is required to access private repositories via the GitLab API.
 You can create a personal access token at https://docs.gitlab.com/user/profile/personal_access_tokens/#create-a-personal-access-token
 or a project access token at https://docs.gitlab.com/user/project/settings/project_access_tokens/#create-a-project-access-token';
 $string['label:gitlaburl'] = 'Gitlab URL';
 $string['label:gitlaburl_help'] = 'Enter Gitlab URL without slash at the end.';
+$string['label:preset_paths'] = 'Role preset paths';
+$string['label:preset_paths_help'] = 'Enter one repository-relative folder or XML file path per line, for example roles/moodle-5 or roles/teacher.xml. Folder paths include subfolders. Leave empty to import all XML files on the branch.';
 $string['label:rolesretrievalsource'] = 'Role import source';
 $string['label:rolesretrievalsourcedescription'] = 'From which source would you like to import roles.';
 $string['label:scheduledtasksettings'] = 'Edit schedule';
@@ -76,14 +98,21 @@ $string['label:scheduledtasksettingsdescription'] = 'Go to scheduled task settin
 $string['label:taskgitlabroles'] = 'Bulk Roles Importer - Import roles from GitLab.';
 $string['label:taskimportroles'] = 'Bulk Roles Importer - Import roles from selected source.';
 
+$string['log:allows_linked'] = '[created, allow lists linked]';
 $string['log:import_roles'] = 'IMPORT ROLES FROM SOURCE: {$a}';
+$string['log:lastimport_kept'] = 'Some roles failed, so the last import time was not updated. Changed roles will be processed again on the next run.';
 $string['log:role_created'] = '- {$a} [created]';
-$string['log:role_not_found'] = '[Role not found]';
+$string['log:rolled_back'] = '[changes rolled back]';
+$string['log:summary'] = 'Created: {$a->created}, updated: {$a->updated}, unchanged: {$a->unchanged}, failed: {$a->failed}';
 $string['log:updated'] = '[updated]';
 
 $string['pluginname'] = 'Bulk Roles Importer';
 
 $string['privacy:metadata'] = 'The Bulk Roles Importer plugin does not store any personal data.';
+
+$string['provider:file'] = 'File';
+$string['provider:github'] = 'Github';
+$string['provider:gitlab'] = 'Gitlab';
 
 $string['settings:pagetitlefile'] = 'Import roles from a file';
 $string['settings:pagetitlemain'] = 'Bulk roles importer settings';

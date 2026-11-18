@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\local\util;
-
 /**
  * Interface for roles importer strategies.
  *
@@ -29,11 +27,12 @@ namespace local_bulk_roles_importer\local\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\local\util;
+
 /**
  * Roles importing strategy interface.
  */
 interface roles_importer_strategy_interface {
-
     /**
      * Returns the name of the strategy.
      *
@@ -51,8 +50,8 @@ interface roles_importer_strategy_interface {
     /**
      * Returns an array of roles.
      *
+     * @param callable|null $findapplied Callback returning the existing role for an applied Git blob, or null.
      * @return array
      */
-    public function get_roles(): array;
-
+    public function get_roles(?callable $findapplied = null): array;
 }

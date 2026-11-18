@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\local\util;
-
 /**
  * Roles importer strategies manager.
  *
@@ -29,25 +27,26 @@ namespace local_bulk_roles_importer\local\util;
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\local\util;
+
 /**
  * Roles importer strategies manager.
  */
 class roles_importer_strategies_manager {
-
-    /** @var array $rolesimporterstrategies Array of all roles importer strategies. */
+    /** @var array $rolesimporterstrategies Array of all roles importer strategies; names are language string IDs. */
     private static array $rolesimporterstrategies = [
         'github' => [
-            'name' => 'Github',
+            'name' => 'provider:github',
             'class' => github_roles_importer_strategy::class,
             'automatic' => true,
         ],
         'gitlab' => [
-            'name' => 'Gitlab',
+            'name' => 'provider:gitlab',
             'class' => gitlab_roles_importer_strategy::class,
             'automatic' => true,
         ],
         'file' => [
-            'name' => 'File',
+            'name' => 'provider:file',
             'class' => file_roles_importer_strategy::class,
             'automatic' => false,
         ],
@@ -59,8 +58,8 @@ class roles_importer_strategies_manager {
      * @return array
      */
     public static function get_strategies_names(): array {
-        $mapfunction = function($value) {
-            return $value['name'];
+        $mapfunction = function ($value) {
+            return get_string($value['name'], 'local_bulk_roles_importer');
         };
         return array_map($mapfunction, self::$rolesimporterstrategies);
     }
@@ -71,11 +70,11 @@ class roles_importer_strategies_manager {
      * @return array
      */
     public static function get_automatic_strategies_names(): array {
-        $filterfunction = function($value) {
+        $filterfunction = function ($value) {
             return $value['automatic'];
         };
-        $mapfunction = function($value) {
-            return $value['name'];
+        $mapfunction = function ($value) {
+            return get_string($value['name'], 'local_bulk_roles_importer');
         };
         $filteredarray = array_filter(self::$rolesimporterstrategies, $filterfunction);
         return array_map($mapfunction, $filteredarray);
@@ -87,7 +86,7 @@ class roles_importer_strategies_manager {
      * @return array
      */
     public static function get_strategies_classes(): array {
-        $mapfunction = function($value) {
+        $mapfunction = function ($value) {
             return $value['class'];
         };
         return array_map($mapfunction, self::$rolesimporterstrategies);
@@ -103,5 +102,4 @@ class roles_importer_strategies_manager {
         $isautomatic = self::$rolesimporterstrategies[$strategy]['automatic'] ?? false;
         return $isautomatic;
     }
-
 }

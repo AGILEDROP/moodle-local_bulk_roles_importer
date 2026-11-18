@@ -33,11 +33,13 @@ defined('MOODLE_INTERNAL') || die('moodle_internal not defined');
 
 // Source.
 $rolesretrievaloptions = roles_importer_strategies_manager::get_automatic_strategies_names();
-$setting = new admin_setting_configselect('local_bulk_roles_importer/roleretrievalsource',
+$setting = new admin_setting_configselect(
+    'local_bulk_roles_importer/roleretrievalsource',
     new lang_string('label:rolesretrievalsource', 'local_bulk_roles_importer'),
     new lang_string('label:rolesretrievalsourcedescription', 'local_bulk_roles_importer'),
     "github",
-    $rolesretrievaloptions);
+    $rolesretrievaloptions
+);
 $settingsmain->add($setting);
 
 // Scheduled task external settings link.

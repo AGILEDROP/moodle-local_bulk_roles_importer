@@ -29,6 +29,7 @@
 
 namespace local_bulk_roles_importer\local\util;
 
+use coding_exception;
 use local_bulk_roles_importer\local\traits\role_file_processor;
 use moodle_exception;
 use ZipArchive;
@@ -38,10 +39,22 @@ use ZipArchive;
  */
 class file_roles_importer_strategy implements roles_importer_strategy_interface {
     use role_file_processor;
+
+    /** @var string $importfilepath Uploaded file in a request-specific directory owned by the caller. */
+    private string $importfilepath;
+
     /**
-     * @var bool $iszip True if the file is a zip file.
+     * Constructor.
+     *
+     * @param string|null $importfilepath Uploaded file in a request-specific directory owned by the caller.
+     * @throws coding_exception If no file path is given.
      */
-    private bool $iszip = false;
+    public function __construct(?string $importfilepath = null) {
+        if ($importfilepath === null || $importfilepath === '') {
+            throw new coding_exception('The file roles importer strategy requires an import file path.');
+        }
+        $this->importfilepath = $importfilepath;
+    }
 
     #[\Override]
     public function get_name(): string {
@@ -53,59 +66,63 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
         return time();
     }
 
+    /**
+     * Get roles from the uploaded XML or ZIP file.
+     *
+     * ZIP files are extracted next to the upload. The caller owns the directory and removes it.
+     *
+     * @param callable|null $findapplied Not used by this strategy.
+     * @return array
+     * @throws moodle_exception If the archive cannot be extracted or the file cannot be read or parsed.
+     */
     #[\Override]
-    public function get_roles(): array {
-        $roles = [];
-        $importfiledir = make_upload_directory('local_bulk_roles_importer');
-        $importfilepath = $importfiledir . DIRECTORY_SEPARATOR . "import_roles_file";
-        $filepaths = [];
+    public function get_roles(?callable $findapplied = null): array {
+        $importfilepath = $this->importfilepath;
 
-        // Prepare files.
-        $zip = new ZipArchive;
+        $zip = new ZipArchive();
         if ($zip->open($importfilepath) === true) {
-            $this->iszip = true;
-
-            $extractedfolder = $importfiledir . DIRECTORY_SEPARATOR . "extracted_files";
-            $this->delete_directory_recursively($extractedfolder);
-            mkdir($extractedfolder, 0777, true);
-            $zip->extractTo($extractedfolder);
+            $extractedfolder = dirname($importfilepath) . DIRECTORY_SEPARATOR . 'extracted_files';
+            $extracted = check_dir_exists($extractedfolder) && $zip->extractTo($extractedfolder);
             $zip->close();
-
-            $filepaths = $this->extract_xml_paths_from_directory_recursively($extractedfolder);
-        } else if (simplexml_load_file($importfilepath)) {
-            $filepaths[] = $importfilepath;
-        } else {
-            unlink($importfilepath);
-            throw new moodle_exception(get_string('error:invalid_file_format', 'local_bulk_roles_importer'));
-        }
-
-        // Process XML files.
-        foreach ($filepaths as $filepath) {
-            $role = $this->process_role_file_from_path($filepath, time());
-
-            // Override filename for display if imported from ZIP.
-            if ($this->iszip) {
-                $role->filename = basename($filepath);
+            if (!$extracted) {
+                throw new moodle_exception('error:extract_failed', 'local_bulk_roles_importer');
             }
 
-            $roles[] = $role;
+            $roles = [];
+            foreach ($this->extract_xml_paths_from_directory_recursively($extractedfolder) as $filepath) {
+                $role = $this->process_role_file_from_path($filepath, time());
+                // Show the name inside the ZIP.
+                $role->filename = basename($filepath);
+                $roles[] = $role;
+            }
+            return $roles;
         }
 
-        $this->delete_directory_recursively($importfiledir);
+        $xml = is_file($importfilepath) && is_readable($importfilepath) ? @file_get_contents($importfilepath) : false;
+        if ($xml === false) {
+            throw new moodle_exception('error:cannot_read_upload', 'local_bulk_roles_importer');
+        }
+        $xmlobject = simplexml_load_string($xml, \SimpleXMLElement::class, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+        if ($xmlobject === false) {
+            throw new moodle_exception('error:invalid_file_format', 'local_bulk_roles_importer');
+        }
 
-        return $roles;
+        $role = $this->process_role_file_from_string($xml, $importfilepath, time());
+        // A single upload falls back to the uploaded file name.
+        $role->filename = null;
+
+        return [$role];
     }
 
-
     /**
-     * Remove directory and all its contents recursively.
+     * Find XML file paths in a directory recursively.
      *
      * @param string $dirpath
-     * @return array|false
+     * @return array
      */
-    private function extract_xml_paths_from_directory_recursively(string $dirpath): array|false {
+    private function extract_xml_paths_from_directory_recursively(string $dirpath): array {
         if (!is_dir($dirpath)) {
-            return false;
+            return [];
         }
 
         $filepaths = [];
@@ -128,30 +145,5 @@ class file_roles_importer_strategy implements roles_importer_strategy_interface 
         }
 
         return $filepaths;
-    }
-
-    /**
-     * Remove directory and all its contents recursively.
-     *
-     * @param string $dirpath
-     * @return void
-     */
-    private function delete_directory_recursively(string $dirpath): void {
-        if (is_dir($dirpath)) {
-            foreach (scandir($dirpath) as $object) {
-                if ($object != "." && $object != "..") {
-                    $objectpath = $dirpath . DIRECTORY_SEPARATOR . $object;
-                    if (
-                        is_dir($objectpath)
-                        && !is_link($objectpath)
-                    ) {
-                        $this->delete_directory_recursively($objectpath);
-                    } else {
-                        unlink($objectpath);
-                    }
-                }
-            }
-            rmdir($dirpath);
-        }
     }
 }

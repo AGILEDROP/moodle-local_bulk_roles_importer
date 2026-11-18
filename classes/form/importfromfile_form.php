@@ -14,13 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_bulk_roles_importer\form;
-
-defined('MOODLE_INTERNAL') || die();
-
-use coding_exception;
-use moodleform;
-
 /**
  * Form to upload a file for roles importing.
  *
@@ -31,13 +24,19 @@ use moodleform;
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace local_bulk_roles_importer\form;
+
+defined('MOODLE_INTERNAL') || die();
+
+use coding_exception;
+use moodleform;
+
 require_once("$CFG->libdir/formslib.php");
 
 /**
  * Class importfromfile_form
  */
 class importfromfile_form extends moodleform {
-
     /**
      * Add elements to form.
      *

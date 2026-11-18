@@ -29,118 +29,110 @@
 
 namespace local_bulk_roles_importer\local\util;
 
-use curl;
+use local_bulk_roles_importer\local\exception\provider_exception;
+use stdClass;
 
 /**
  * Definition class for Gitlab API.
  */
-final class gitlab_api extends gitprovider_api {
+class gitlab_api extends gitprovider_api {
+    /** @var int Page size for paginated requests. */
+    protected const PER_PAGE = 100;
+
+    /** @var int Safety limit on the number of tree pages. */
+    protected const MAX_PAGES = 1000;
 
     #[\Override]
-    public function set_url(): void {
+    public function get_provider_name(): string {
+        return 'gitlab';
+    }
+
+    #[\Override]
+    protected function set_url(): void {
         $this->url = $this->get_config_with_default('gitlaburl', 'https://gitlab.com');
     }
 
     #[\Override]
-    public function set_token(): void {
-        $this->token = get_config('local_bulk_roles_importer', 'gitlabtoken');
+    protected function set_token(): void {
+        $this->token = (string)get_config('local_bulk_roles_importer', 'gitlabtoken');
     }
 
     #[\Override]
-    public function set_project(): void {
-        $project = $this->get_config_with_default('gitlabproject', 'moodle/template-01/roles');
-        $this->project = urlencode($project);
+    protected function set_project(): void {
+        $this->project = trim($this->get_config_with_default('gitlabproject', 'moodle/template-01/roles'), '/');
     }
 
     #[\Override]
-    public function set_mainbranch(): void {
+    protected function set_mainbranch(): void {
         $this->mainbranch = $this->get_config_with_default('gitlabmain', 'main');
     }
 
     #[\Override]
-    public function get_curl(): curl|false {
-        $headers = [
-            'PRIVATE-TOKEN: ' . $this->get_token(),
+    protected function get_headers(): array {
+        return ($this->get_token() !== '') ? ['PRIVATE-TOKEN: ' . $this->get_token()] : [];
+    }
+
+    /**
+     * Base URL of the project API; the project path is encoded as one segment.
+     *
+     * @return string
+     * @throws provider_exception When no project is configured.
+     */
+    protected function get_project_url(): string {
+        if ($this->get_project() === '') {
+            throw new provider_exception('error:provider_config', get_string('label:gitlabproject', 'local_bulk_roles_importer'));
+        }
+        return $this->get_url() . '/api/v4/projects/' . rawurlencode($this->get_project());
+    }
+
+    #[\Override]
+    protected function fetch_head(): stdClass {
+        $url = $this->get_project_url() . '/repository/branches/' . rawurlencode($this->get_mainbranch());
+        $branch = $this->request_object($url);
+
+        return (object)[
+            'sha' => $this->require_string($branch, ['commit', 'id'], $url),
+            'time' => $this->require_time($branch, ['commit', 'committed_date'], $url),
         ];
-
-        $curl = new \curl();
-        $curl->setHeader($headers);
-
-        return $curl;
     }
 
     #[\Override]
-    public function get_branches_url(): string {
+    public function get_files(): array {
+        $files = [];
+        for ($page = 1; $page <= self::MAX_PAGES; $page++) {
+            $url = $this->get_project_url() . '/repository/tree?' . $this->query([
+                'ref' => $this->get_head()->sha,
+                'recursive' => 'true',
+                'per_page' => self::PER_PAGE,
+                'page' => $page,
+            ]);
+            $entries = $this->request_list($url);
 
-        return $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/branches']);
-    }
+            foreach ($entries as $entry) {
+                if (!$entry instanceof stdClass || ($entry->type ?? '') !== 'blob') {
+                    continue;
+                }
+                $path = $this->require_string($entry, ['path'], $url);
+                if ($this->is_xml_path($path)) {
+                    $files[] = (object)['path' => $path, 'revision' => $this->require_string($entry, ['id'], $url)];
+                }
+            }
 
-    #[\Override]
-    public function get_main_branch_last_updated_timestamp(): false|string {
-        $mainbranch = $this->get_mainbranch();
-        $branch = $this->get_branch($mainbranch);
-        if (!$branch) {
-            return false;
+            if (count($entries) < self::PER_PAGE) {
+                return $files;
+            }
         }
 
-        return $branch->commit->created_at ?? false;
-    }
-
-    #[\Override]
-    public function get_files(?string $branch = null): array|false {
-
-        if (!$branch) {
-            $branch = $this->get_mainbranch();
-        }
-
-        if (!$branch) {
-            return false;
-        }
-
-        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/tree?ref=' . $branch . '&per_page=100']);
-
-        $files = $this->get_data($url);
-
-        if (!$files) {
-            return false;
-        }
-
-        $files = json_decode($files);
-
-        return $files;
-    }
-
-    #[\Override]
-    public function get_file_content(string $branch, string $filepath): false|string {
-        $url = $this->build_api_url(['api/v4/projects', $this->get_project(), 'repository/files', $filepath, 'raw?ref=' . $branch]);
-
-        return $this->get_data($url);
-    }
-
-    #[\Override]
-    public function get_file_last_commit(string $filepath): false|int {
-        $url = $this->build_api_url([
-                'api/v4/projects',
-                $this->get_project(),
-                'repository/files', $filepath,
-                'blame?ref=' . $this->get_mainbranch(),
+        throw new provider_exception('error:provider_response', (object)[
+            'endpoint' => 'repository/tree',
+            'message' => 'too many pages',
         ]);
-
-        $data = $this->get_data($url);
-        $json = json_decode($data);
-
-        $lastpart = end($json);
-        $date = $lastpart->commit->committed_date ?? false;
-
-        if (!$date) {
-            return 0;
-        }
-
-        return strtotime($date);
     }
 
     #[\Override]
-    public function format_url(string $url): string {
-        return $url; // GitLab requires encoded slashes.
+    public function get_file_content(string $ref, string $filepath): string {
+        $url = $this->get_project_url() . '/repository/files/' . rawurlencode($filepath) . '/raw?' .
+            $this->query(['ref' => $ref]);
+        return $this->request($url);
     }
 }
